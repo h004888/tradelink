@@ -1,0 +1,71 @@
+{
+  "app_name": "TradeLink",
+  "splash": {
+    "tagline": "Safe & Transparent Transactions"
+  },
+  "onboarding": {
+    "skip": "Skip",
+    "next": "Next",
+    "get_started": "Get Started",
+    "slide_1_title": "Safe Trading",
+    "slide_1_desc": "Escrow system holds your money until you receive the item.",
+    "slide_2_title": "Flexible Exchange",
+    "slide_2_desc": "Trade items without cash using dual confirmation mechanism.",
+    "slide_3_title": "Reputation First",
+    "slide_3_desc": "Two-way reviews help build a safer trading community."
+  },
+  "login": {
+    "title": "Login",
+    "phone_label": "Phone Number",
+    "phone_hint": "Enter phone number",
+    "continue": "Continue",
+    "or": "or",
+    "google": "Sign in with Google",
+    "no_account": "Don't have an account?",
+    "register": "Register"
+  },
+  "otp": {
+    "title": "Account Verification",
+    "subtitle": "We sent a verification code to",
+    "verify": "Verify",
+    "resend": "Resend code",
+    "resend_in": "Resend code in",
+    "secured_by": "Secured by TradeLink"
+  },
+  "profile": {
+    "title": "Profile",
+    "edit": "Edit",
+    "reputation": "Reputation Score",
+    "transactions": "Transactions",
+    "success_rate": "Success Rate",
+    "member_since": "Member Since",
+    "listings": "Listings",
+    "settings": "Settings",
+    "logout": "Logout"
+  },
+  "edit_profile": {
+    "title": "Edit Profile",
+    "full_name": "Full Name",
+    "phone": "Phone Number",
+    "address": "Address",
+    "change_password": "Change Password",
+    "save": "Save Changes",
+    "completion": "Profile"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "retry": "Retry",
+    "empty": "No data available",
+    "search": "Search",
+    "filter": "Filter",
+    "sort": "Sort",
+    "view_all": "View All"
+  }
+}

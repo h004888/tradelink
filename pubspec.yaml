@@ -38,8 +38,32 @@ dependencies:
   # State management cho MVVM pattern
   provider: ^6.1.2
 
+  # Routing
+  go_router: ^14.8.0
+
+  # Internationalization
+  easy_localization: ^3.0.7
+
+  # Fonts - Inter family
+  google_fonts: ^6.2.1
+
+  # Secure storage for auth tokens
+  flutter_secure_storage: ^9.2.4
+
+  # Date/number formatting
+  intl: ^0.20.2
+
+  # Image caching
+  cached_network_image: ^3.4.1
+
+  # Loading skeletons
+  shimmer: ^3.0.0
+
 dev_dependencies:
   flutter_test:
+    sdk: flutter
+
+  integration_test:
     sdk: flutter
 
   # The "flutter_lints" package below contains a set of recommended lints to
@@ -59,6 +83,10 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # Localization files
+  assets:
+    - assets/translations/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

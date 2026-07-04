@@ -1,0 +1,71 @@
+{
+  "app_name": "TradeLink",
+  "splash": {
+    "tagline": "Giao dịch an toàn, minh bạch"
+  },
+  "onboarding": {
+    "skip": "Bỏ qua",
+    "next": "Tiếp tục",
+    "get_started": "Bắt đầu",
+    "slide_1_title": "Mua bán an toàn",
+    "slide_1_desc": "Hệ thống Escrow giữ tiền cho đến khi bạn nhận được hàng.",
+    "slide_2_title": "Trao đổi linh hoạt",
+    "slide_2_desc": "Đổi đồ không cần tiền mặt với cơ chế xác nhận song phương.",
+    "slide_3_title": "Uy tín là trên hết",
+    "slide_3_desc": "Đánh giá 2 chiều giúp cộng đồng giao dịch an toàn hơn."
+  },
+  "login": {
+    "title": "Đăng nhập",
+    "phone_label": "Số điện thoại",
+    "phone_hint": "Nhập số điện thoại",
+    "continue": "Tiếp tục",
+    "or": "hoặc",
+    "google": "Đăng nhập với Google",
+    "no_account": "Chưa có tài khoản?",
+    "register": "Đăng ký"
+  },
+  "otp": {
+    "title": "Xác thực tài khoản",
+    "subtitle": "Chúng tôi đã gửi mã xác thực đến",
+    "verify": "Xác thực",
+    "resend": "Gửi lại mã",
+    "resend_in": "Gửi lại mã sau",
+    "secured_by": "Bảo mật bởi TradeLink"
+  },
+  "profile": {
+    "title": "Hồ sơ cá nhân",
+    "edit": "Chỉnh sửa",
+    "reputation": "Điểm uy tín",
+    "transactions": "Giao dịch",
+    "success_rate": "Tỷ lệ thành công",
+    "member_since": "Tham gia từ",
+    "listings": "Tin đăng",
+    "settings": "Cài đặt",
+    "logout": "Đăng xuất"
+  },
+  "edit_profile": {
+    "title": "Chỉnh sửa hồ sơ",
+    "full_name": "Họ và tên",
+    "phone": "Số điện thoại",
+    "address": "Địa chỉ",
+    "change_password": "Đổi mật khẩu",
+    "save": "Lưu thay đổi",
+    "completion": "Hồ sơ"
+  },
+  "common": {
+    "cancel": "Hủy",
+    "confirm": "Xác nhận",
+    "save": "Lưu",
+    "delete": "Xoá",
+    "edit": "Chỉnh sửa",
+    "back": "Quay lại",
+    "loading": "Đang tải...",
+    "error": "Có lỗi xảy ra",
+    "retry": "Thử lại",
+    "empty": "Chưa có dữ liệu",
+    "search": "Tìm kiếm",
+    "filter": "Bộ lọc",
+    "sort": "Sắp xếp",
+    "view_all": "Xem tất cả"
+  }
+}
