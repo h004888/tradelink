@@ -31,6 +31,9 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
+
+# Local env config (contains developer's backend IP)
+lib/core/env.dart
 /coverage/
 
 # Symbolication related

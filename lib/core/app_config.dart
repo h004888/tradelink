@@ -1,5 +1,7 @@
 import 'dart:io' show Platform;
 
+import 'env.dart';
+
 /// Cấu hình ứng dụng TradeLink.
 ///
 /// ## API Base URL resolution priority:
@@ -38,13 +40,16 @@ class AppConfig {
 
   /// --- API Base URL ---
   ///
-  /// Ưu tiên: dart-define → platform auto-detect → fallback
+  /// Ưu tiên: Env.baseUrl → dart-define → platform auto-detect → fallback
   static String get baseUrl {
-    // 1. dart-define override (build-time config)
+    // 1. env.dart (developer local config — highest priority)
+    if (Env.baseUrl.isNotEmpty) return Env.baseUrl;
+
+    // 2. dart-define override (build-time config)
     final envUrl = const String.fromEnvironment(_envKeyBaseUrl);
     if (envUrl.isNotEmpty) return envUrl;
 
-    // 2. Platform auto-detection
+    // 3. Platform auto-detection
     return _detectPlatformUrl();
   }
 

@@ -1,32 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../core/api_client.dart';
 import '../../core/result.dart';
 import '../../core/ui_state.dart';
-import '../../models/listing_model.dart';
+import '../../models/transaction_model.dart';
 import '../../repositories/listing_repository.dart';
+import '../../repositories/transaction_repository.dart';
 import '../../services/analytics_service.dart';
 import '../../utils/constants.dart';
 
 class HomeViewModel extends ChangeNotifier {
-  final ListingRepository _repository = ListingRepository();
+  final ListingRepository _listingRepo = ListingRepository();
+  final TransactionRepository _txRepo = TransactionRepository();
 
-  // ── Sections ──
-  UiState<List<Listing>> _featured = const Loading();
-  UiState<List<Listing>> get featured => _featured;
+  // ── Unified home data ──
+  UiState<HomeData> _homeData = const Loading();
+  UiState<HomeData> get homeData => _homeData;
 
-  UiState<List<Listing>> _nearby = const Loading();
-  UiState<List<Listing>> get nearby => _nearby;
+  // ── Active transactions ──
+  UiState<List<Transaction>> _activeTransactions = const Loading();
+  UiState<List<Transaction>> get activeTransactions => _activeTransactions;
 
-  UiState<List<Listing>> _newest = const Loading();
-  UiState<List<Listing>> get newest => _newest;
+  /// Có ít nhất 1 giao dịch chưa hoàn tất
+  bool get hasActiveTransaction => switch (_activeTransactions) {
+    Success(data: final txs) => txs.any((t) => t.escrowStep != null && t.escrowStep != EscrowStep.released),
+    _ => false,
+  };
 
-  UiState<List<Listing>> _popular = const Loading();
-  UiState<List<Listing>> get popular => _popular;
-
-  UiState<List<TopSellerInfo>> _topSellers = const Loading();
-  UiState<List<TopSellerInfo>> get topSellers => _topSellers;
-
-  // ── Categories filter (cho Featured) ──
+  // ── Categories filter ──
   static const List<String> categories = [
     'Tất cả', 'Điện thoại', 'Laptop', 'Xe cộ',
     'Thời trang', 'Điện tử', 'Phụ kiện', 'Đồ gia dụng', 'Khác',
@@ -37,68 +39,50 @@ class HomeViewModel extends ChangeNotifier {
 
   HomeViewModel() { load(); }
 
-  /// Helper generic: gọi API, trả về UiState — mỗi section xử lý error riêng
-  Future<UiState<T>> _safeLoad<T>(Future<Result<T>> apiCall) async {
-    try {
-      final result = await apiCall;
-      if (result is ResultSuccess<T>) {
-        return Success(result.data);
-      }
-      return Error(
-        message: (result as FailureResult<T>).failure.message,
-        retryable: true,
-      );
-    } catch (e) {
-      debugPrint('[HomeViewModel] Section error: $e');
-      return const Error(message: 'Đã xảy ra lỗi không mong đợi', retryable: true);
-    }
-  }
-
   Future<void> load() async {
     AnalyticsService.instance.track('home_viewed');
 
-    // Set loading state cho tất cả section
-    _featured = const Loading();
-    _nearby = const Loading();
-    _newest = const Loading();
-    _popular = const Loading();
-    _topSellers = const Loading();
+    _homeData = const Loading();
+    _activeTransactions = const Loading();
     notifyListeners();
 
-    // Fire parallel — mỗi section tự xử lý success/error riêng
-    final results = await Future.wait([
-      _safeLoad<List<Listing>>(_repository.getFeaturedListings()),
-      _safeLoad<List<Listing>>(_repository.getNewestListings()),
-      _safeLoad<List<Listing>>(_repository.getPopularListings()),
-      _safeLoad<List<Listing>>(_repository.getNewestListings()), // Fallback: newest cho nearby
-      _safeLoad<List<TopSellerInfo>>(_repository.getTopSellers()),
-    ]);
+    // Song song: home data + transactions (nếu có token)
+    final futures = <Future>[
+      _listingRepo.getHomeData().then((r) {
+        _homeData = r is ResultSuccess<HomeData>
+            ? Success(r.data)
+            : Error(message: (r as FailureResult<HomeData>).failure.message, retryable: true);
+      }),
+    ];
 
-    _featured = results[0] as UiState<List<Listing>>;
-    _newest = results[1] as UiState<List<Listing>>;
-    _popular = results[2] as UiState<List<Listing>>;
-    _nearby = results[3] as UiState<List<Listing>>;
-    _topSellers = results[4] as UiState<List<TopSellerInfo>>;
+    if (ApiClient.instance.getToken() != null) {
+      futures.add(_txRepo.getAll().then((r) {
+        _activeTransactions = r is ResultSuccess<List<Transaction>>
+            ? Success(r.data)
+            : const Success([]); // fallback: empty → card ẩn
+      }));
+    } else {
+      _activeTransactions = const Success([]);
+    }
+
+    await Future.wait(futures);
     notifyListeners();
   }
 
   Future<void> selectCategory(int i) async {
     _selectedCategory = i;
     notifyListeners();
-    final category = i == 0 ? null : selectedCategoryName;
-    final result = await _repository.getAllListings(category: category, status: 'active');
-    _featured = result.isSuccess
-        ? Success((result as ResultSuccess<List<Listing>>).data)
-        : Error(message: (result as FailureResult<List<Listing>>).failure.message, retryable: true);
-    notifyListeners();
   }
 
   void goToSearch(BuildContext context) => context.push(AppPaths.search);
   void goToCategory(BuildContext context, String name) =>
       context.push('${AppPaths.category}/${Uri.encodeComponent(name)}');
-  void goToItemDetail(BuildContext context, String id) => context.push('${AppPaths.itemDetail}/$id');
-  void goToSellerProfile(BuildContext context, String userId) =>
-      context.push('${AppPaths.sellerProfile}/$userId');
-  void goToAllNewest(BuildContext context) => context.push(AppPaths.search);
-  void goToAllPopular(BuildContext context) => context.push(AppPaths.search);
+  void goToItemDetail(BuildContext context, String id) =>
+      context.push('${AppPaths.itemDetail}/$id');
+  void goToTransactionDetail(BuildContext context, Transaction tx) {
+    final path = tx.type == TransactionType.trade
+        ? '${AppPaths.transactionTrade}/${tx.id}'
+        : '${AppPaths.transactionSale}/${tx.id}';
+    context.push(path);
+  }
 }
