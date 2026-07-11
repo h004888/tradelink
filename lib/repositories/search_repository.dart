@@ -1,15 +1,21 @@
-import '../../core/result.dart';
-import '../../models/listing_model.dart';
+import '../core/api_client.dart';
+import '../core/result.dart';
+import '../models/listing_model.dart';
 
 class SearchRepository {
-  final List<Listing> _allListings = [
-    Listing(id: 's1', title: 'iPhone 15 Pro Max', description: 'Like new', price: 28000000, imageUrls: [], category: 'Điện thoại', condition: ItemCondition.likeNew, type: ListingType.sale, sellerId: 'u1', sellerName: 'A', createdAt: DateTime.now()),
-    Listing(id: 's2', title: 'MacBook Air M3', description: 'Còn bảo hành', price: 22000000, imageUrls: [], category: 'Điện tử', condition: ItemCondition.likeNew, type: ListingType.sale, sellerId: 'u2', sellerName: 'B', createdAt: DateTime.now()),
-    Listing(id: 's3', title: 'Samsung S24 Ultra', description: 'Đổi lấy iPhone', price: null, imageUrls: [], category: 'Điện thoại', condition: ItemCondition.new_, type: ListingType.trade, sellerId: 'u3', sellerName: 'C', createdAt: DateTime.now()),
-    Listing(id: 's4', title: 'Bàn phím cơ Keychron', description: 'Switch Brown', price: 1200000, imageUrls: [], category: 'Phụ kiện', condition: ItemCondition.used, type: ListingType.both, sellerId: 'u4', sellerName: 'D', createdAt: DateTime.now()),
-    Listing(id: 's5', title: 'Xe đạp Trek FX3', description: 'Mới 99%', price: 15000000, imageUrls: [], category: 'Xe cộ', condition: ItemCondition.likeNew, type: ListingType.sale, sellerId: 'u1', sellerName: 'A', createdAt: DateTime.now()),
-    Listing(id: 's6', title: 'Đồng hồ Casio G-Shock', description: 'Limited edition', price: 3500000, imageUrls: [], category: 'Thời trang', condition: ItemCondition.new_, type: ListingType.sale, sellerId: 'u5', sellerName: 'E', createdAt: DateTime.now()),
-  ];
+  final _api = ApiClient.instance;
+
+  Listing _fromJson(Map<String, dynamic> j) => Listing(
+        id: j['_id'] as String? ?? j['id'] as String? ?? '',
+        title: j['title'] as String? ?? '',
+        description: j['description'] as String? ?? '',
+        price: (j['price'] as num?)?.toDouble(),
+        imageUrls: (j['imageUrls'] as List?)?.map((e) => e.toString()).toList() ?? const [],
+        category: j['category'] as String? ?? '',
+        sellerId: j['sellerId']?.toString() ?? '',
+        sellerName: j['sellerName'] as String? ?? '',
+        createdAt: DateTime.tryParse(j['createdAt']?.toString() ?? '') ?? DateTime.now(),
+      );
 
   Future<Result<List<Listing>>> search({
     String query = '',
@@ -18,24 +24,19 @@ class SearchRepository {
     double? minPrice,
     double? maxPrice,
   }) async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    var results = _allListings.toList();
+    final q = <String, String>{};
+    if (query.isNotEmpty) q['q'] = query;
+    if (type != null) q['type'] = type.name;
+    if (category != null) q['category'] = category;
+    if (minPrice != null) q['minPrice'] = minPrice.toString();
+    if (maxPrice != null) q['maxPrice'] = maxPrice.toString();
 
-    if (query.isNotEmpty) {
-      results = results.where((l) => l.title.toLowerCase().contains(query.toLowerCase())).toList();
-    }
-    if (type != null) {
-      results = results.where((l) => l.type == type || l.type == ListingType.both).toList();
-    }
-    if (category != null) {
-      results = results.where((l) => l.category == category).toList();
-    }
-    if (minPrice != null) {
-      results = results.where((l) => l.price != null && l.price! >= minPrice).toList();
-    }
-    if (maxPrice != null) {
-      results = results.where((l) => l.price != null && l.price! <= maxPrice).toList();
-    }
-    return ResultSuccess(results);
+    final res = await _api.get('/search', query: q.isEmpty ? null : q);
+    return switch (res) {
+      ResultSuccess(data: final d) => ResultSuccess<List<Listing>>(
+          ((d['listings'] as List?) ?? []).map((e) => _fromJson(e as Map<String, dynamic>)).toList(),
+        ),
+      FailureResult(failure: final f) => FailureResult<List<Listing>>(f),
+    };
   }
 }

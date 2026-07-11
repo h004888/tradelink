@@ -1,6 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../utils/constants.dart';
+import '../router.dart';
+import '../services/analytics_service.dart';
+import '../services/storage_service.dart';
+import '../utils/constants.dart';
 
 class OnboardingViewModel extends ChangeNotifier {
   int _currentPage = 0;
@@ -9,19 +13,19 @@ class OnboardingViewModel extends ChangeNotifier {
 
   final List<_OnboardingPage> _pages = const [
     _OnboardingPage(
-      icon: Icons.security,
-      title: 'Mua bán an toàn',
-      description: 'Hệ thống Escrow giữ tiền cho đến khi bạn nhận được hàng.',
+      icon: Icons.people_outline,
+      title: 'Mua bán với người thật',
+      description: 'Khám phá các sản phẩm được đăng bởi cộng đồng.',
     ),
     _OnboardingPage(
-      icon: Icons.swap_horiz,
-      title: 'Trao đổi linh hoạt',
-      description: 'Đổi đồ không cần tiền mặt với cơ chế xác nhận song phương.',
+      icon: Icons.shield_outlined,
+      title: 'Tiền được giữ an toàn',
+      description: 'Người bán chưa nhận tiền ngay sau khi bạn thanh toán.',
     ),
     _OnboardingPage(
-      icon: Icons.verified_user,
-      title: 'Uy tín là trên hết',
-      description: 'Đánh giá 2 chiều giúp cộng đồng giao dịch an toàn hơn.',
+      icon: Icons.inventory_2_outlined,
+      title: 'Kiểm tra trước khi hoàn tất',
+      description: 'Bạn có thời gian kiểm tra hàng và báo vấn đề.',
     ),
   ];
 
@@ -37,8 +41,31 @@ class OnboardingViewModel extends ChangeNotifier {
     controller.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
   }
 
-  void skip(BuildContext context) => context.go(AppPaths.login);
-  void getStarted(BuildContext context) => context.go(AppPaths.login);
+  void skip(BuildContext context) {
+    debugPrint('[Onboarding] skip called');
+    AnalyticsService.instance.track('onboarding_skipped');
+    try {
+      StorageService.instance.setOnboardingDone();
+    } catch (e) {
+      debugPrint('[Onboarding] setOnboardingDone error: $e');
+    }
+    AppRouter.onboardingDone = true;
+    debugPrint('[Onboarding] onboardingDone=${AppRouter.onboardingDone}');
+    context.go(AppPaths.home);
+  }
+
+  void getStarted(BuildContext context) {
+    debugPrint('[Onboarding] getStarted called');
+    AnalyticsService.instance.track('onboarding_completed');
+    try {
+      StorageService.instance.setOnboardingDone();
+    } catch (e) {
+      debugPrint('[Onboarding] setOnboardingDone error: $e');
+    }
+    AppRouter.onboardingDone = true;
+    debugPrint('[Onboarding] onboardingDone=${AppRouter.onboardingDone}');
+    context.go(AppPaths.home);
+  }
 }
 
 class _OnboardingPage {

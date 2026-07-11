@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+
 import '../../core/ui_state.dart';
 import '../../utils/theme.dart';
 import '../../viewmodels/edit_profile_viewmodel.dart';
+import '../../widgets/empty_state.dart';
+import '../../widgets/tradelink_app_bar.dart';
+import '../../widgets/tradelink_button.dart';
+import '../../widgets/tradelink_card.dart';
 
 class EditProfileView extends StatelessWidget {
   const EditProfileView({super.key});
@@ -26,141 +32,238 @@ class _EditProfileBody extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: TradeLinkColors.surface,
-      appBar: AppBar(title: const Text('Chỉnh sửa hồ sơ')),
+      appBar: const TradeLinkAppBar(title: 'Chỉnh sửa hồ sơ'),
       body: switch (vm.loadState) {
-        Loading() => const Center(child: CircularProgressIndicator()),
-        Error(message: final msg) => Center(child: Text(msg)),
-        Success() => _buildForm(context, vm),
+        Loading() => const Center(
+            child: SizedBox(
+              width: 28,
+              height: 28,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ),
+        Error(message: final msg) => EmptyState(
+            icon: Icons.cloud_off_outlined,
+            title: 'Không tải được hồ sơ',
+            message: msg,
+            actionLabel: 'Thử lại',
+            onAction: vm.load,
+          ),
+        Success(data: final profile) => _buildForm(context, vm, profile.avatarUrl),
         _ => const SizedBox.shrink(),
       },
     );
   }
 
-  Widget _buildForm(BuildContext context, EditProfileViewModel vm) {
+  Widget _buildForm(BuildContext context, EditProfileViewModel vm, String? avatarUrl) {
+    final theme = Theme.of(context);
     return SingleChildScrollView(
       padding: const EdgeInsets.all(TradeLinkSpacing.marginMobile),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Profile completion
-          Container(
+          // Profile completion card
+          TradeLinkCard(
             padding: const EdgeInsets.all(TradeLinkSpacing.md),
-            decoration: BoxDecoration(
-              color: TradeLinkColors.surfaceContainerLowest,
-              borderRadius: BorderRadius.circular(TradeLinkRadii.lg),
-              border: Border.all(color: TradeLinkColors.cardBorder),
-            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Hồ sơ: 85%', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                const SizedBox(height: TradeLinkSpacing.xs),
-                LinearProgressIndicator(value: 0.85, backgroundColor: TradeLinkColors.surfaceContainerHigh, color: TradeLinkColors.successGreen),
-              ],
-            ),
-          ),
-          const SizedBox(height: TradeLinkSpacing.lg),
-          // Avatar
-          Center(
-            child: Stack(
-              children: [
-                Container(
-                  width: 88, height: 88,
-                  decoration: BoxDecoration(shape: BoxShape.circle, color: TradeLinkColors.surfaceContainerHigh),
-                  child: const Icon(Icons.person, size: 48, color: TradeLinkColors.onSurfaceVariant),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Hồ sơ',
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      '85% hoàn thành',
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: TradeLinkColors.successGreen,
+                        fontWeight: FontWeight.w700,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ],
                 ),
-                Positioned(
-                  bottom: 0, right: 0,
-                  child: Container(
-                    width: 28, height: 28,
-                    decoration: const BoxDecoration(shape: BoxShape.circle, color: TradeLinkColors.primaryContainer),
-                    child: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
+                const SizedBox(height: TradeLinkSpacing.xs),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(TradeLinkRadii.full),
+                  child: LinearProgressIndicator(
+                    value: 0.85,
+                    minHeight: 6,
+                    backgroundColor: TradeLinkColors.surfaceContainerHigh,
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      TradeLinkColors.successGreen,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: TradeLinkSpacing.xs),
+                Text(
+                  'Hoàn thiện hồ sơ giúp tăng độ tin cậy giao dịch',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: TradeLinkColors.onSurfaceVariant,
                   ),
                 ),
               ],
             ),
           ),
           const SizedBox(height: TradeLinkSpacing.lg),
+          // Avatar (with upload action)
+          Center(
+            child: GestureDetector(
+              onTap: () => _showAvatarPicker(context, vm),
+              child: Stack(
+                children: [
+                  Container(
+                    width: 96,
+                    height: 96,
+                    clipBehavior: Clip.antiAlias,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: TradeLinkColors.surfaceContainerHigh,
+                      border: Border.all(
+                        color: TradeLinkColors.cardBorder,
+                        width: 2,
+                      ),
+                    ),
+                    child: avatarUrl != null
+                        ? Image.network(
+                            avatarUrl,
+                            fit: BoxFit.cover,
+                            width: 96,
+                            height: 96,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.person_outline,
+                              size: 48,
+                              color: TradeLinkColors.onSurfaceVariant,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.person_outline,
+                            size: 48,
+                            color: TradeLinkColors.onSurfaceVariant,
+                          ),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: TradeLinkColors.primaryContainer,
+                        border: Border.all(color: TradeLinkColors.surface, width: 2),
+                      ),
+                      child: vm.avatarState is Loading
+                          ? const Padding(
+                              padding: EdgeInsets.all(6),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(
+                              Icons.camera_alt_outlined,
+                              size: 16,
+                              color: Colors.white,
+                            ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: TradeLinkSpacing.lg),
           // Form fields
           TextField(
             controller: TextEditingController(text: vm.name),
-            decoration: const InputDecoration(labelText: 'Họ và tên', prefixIcon: Icon(Icons.person_outline)),
+            style: theme.textTheme.bodyLarge,
+            decoration: const InputDecoration(
+              labelText: 'Họ và tên',
+              prefixIcon: Icon(Icons.person_outline),
+            ),
             onChanged: vm.onNameChanged,
           ),
           const SizedBox(height: TradeLinkSpacing.md),
           TextField(
-            controller: TextEditingController(text: vm.phone),
-            decoration: const InputDecoration(labelText: 'Số điện thoại', prefixIcon: Icon(Icons.phone_outlined)),
-            keyboardType: TextInputType.phone,
-            onChanged: vm.onPhoneChanged,
-          ),
-          const SizedBox(height: TradeLinkSpacing.md),
-          TextField(
             controller: TextEditingController(text: vm.address),
-            decoration: const InputDecoration(labelText: 'Địa chỉ', prefixIcon: Icon(Icons.location_on_outlined)),
+            style: theme.textTheme.bodyLarge,
+            decoration: const InputDecoration(
+              labelText: 'Địa chỉ',
+              prefixIcon: Icon(Icons.location_on_outlined),
+            ),
             onChanged: vm.onAddressChanged,
           ),
-          const SizedBox(height: TradeLinkSpacing.xl),
-          // Settings toggles
-          Container(
-            padding: const EdgeInsets.all(TradeLinkSpacing.md),
-            decoration: BoxDecoration(
-              color: TradeLinkColors.surfaceContainerLowest,
-              borderRadius: BorderRadius.circular(TradeLinkRadii.lg),
-              border: Border.all(color: TradeLinkColors.cardBorder),
-            ),
-            child: const Column(
-              children: [
-                _SettingToggle(icon: Icons.swap_horiz, title: 'Thông báo giao dịch'),
-                Divider(),
-                _SettingToggle(icon: Icons.chat_outlined, title: 'Thông báo tin nhắn'),
-              ],
-            ),
-          ),
-          const SizedBox(height: TradeLinkSpacing.lg),
-          // Save button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: vm.saveState is Loading ? null : () async {
-                final success = await vm.save();
-                if (success && context.mounted) context.pop();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: TradeLinkColors.primaryContainer,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: TradeLinkSpacing.md),
+          if (vm.avatarState is Error) ...[
+            const SizedBox(height: TradeLinkSpacing.xs),
+            Text(
+              (vm.avatarState as Error).message,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: TradeLinkColors.error,
               ),
-              child: vm.saveState is Loading
-                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Text('Lưu thay đổi', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
             ),
+          ],
+          const SizedBox(height: TradeLinkSpacing.xl),
+          TradeLinkButton.cta(
+            label: 'Lưu thay đổi',
+            isLoading: vm.saveState is Loading,
+            onPressed: vm.saveState is Loading
+                ? null
+                : () async {
+                    final success = await vm.save();
+                    if (success && context.mounted) context.pop();
+                  },
           ),
         ],
       ),
     );
   }
-}
 
-class _SettingToggle extends StatefulWidget {
-  final IconData icon;
-  final String title;
-  const _SettingToggle({required this.icon, required this.title});
-
-  @override
-  State<_SettingToggle> createState() => _SettingToggleState();
-}
-
-class _SettingToggleState extends State<_SettingToggle> {
-  bool _value = true;
-
-  @override
-  Widget build(BuildContext context) {
-    return SwitchListTile(
-      secondary: Icon(widget.icon, color: TradeLinkColors.onSurfaceVariant, size: 20),
-      title: Text(widget.title, style: const TextStyle(fontSize: 16, color: TradeLinkColors.onSurface)),
-      value: _value,
-      onChanged: (v) => setState(() => _value = v),
-      contentPadding: EdgeInsets.zero,
+  void _showAvatarPicker(BuildContext context, EditProfileViewModel vm) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: TradeLinkColors.surfaceContainerLowest,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(TradeLinkRadii.xl)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: TradeLinkSpacing.md),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: TradeLinkColors.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: TradeLinkSpacing.md),
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined),
+                title: const Text('Chọn từ thư viện'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await vm.pickAndUploadAvatar(source: ImageSource.gallery);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt_outlined),
+                title: const Text('Chụp ảnh'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await vm.pickAndUploadAvatar(source: ImageSource.camera);
+                },
+              ),
+              const SizedBox(height: TradeLinkSpacing.sm),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

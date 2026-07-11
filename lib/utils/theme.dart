@@ -1,79 +1,84 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 // ──────────────────────────────────────────────
-// Color Tokens — từ DESIGN.md
+// Color Tokens — từ DESIGN.md (v alpha)
 // ──────────────────────────────────────────────
 
 class TradeLinkColors {
   TradeLinkColors._();
 
-  // Surface scale
-  static const Color surface = Color(0xFFF8F9FF);
-  static const Color surfaceDim = Color(0xFFCBD5F5);
-  static const Color surfaceBright = Color(0xFFF8F9FF);
-  static const Color surfaceContainerLowest = Color(0xFFFFFFFF);
-  static const Color surfaceContainerLow = Color(0xFFEFF4FF);
-  static const Color surfaceContainer = Color(0xFFE5EEFF);
-  static const Color surfaceContainerHigh = Color(0xFFDCE9FF);
-  static const Color surfaceContainerHighest = Color(0xFFD3E4FE);
-  static const Color onSurface = Color(0xFF0B1C30);
-  static const Color onSurfaceVariant = Color(0xFF43474E);
-  static const Color inverseSurface = Color(0xFF213145);
-  static const Color inverseOnSurface = Color(0xFFEAF1FF);
+  // ── Brand colors (DESIGN.md: #232-234) ──
+  static const Color primary = Color(0xFF2563EB);         // Protection Blue
+  static const Color primaryHover = Color(0xFF1D4ED8);    // Primary Hover
+  static const Color trustTeal = Color(0xFF14B8A6);        // Trust Teal
+  static const Color paymentHeld = Color(0xFF0F766E);      // Payment Held
+
+  // ── Semantic colors (DESIGN.md: #238-243) ──
+  static const Color success = Color(0xFF16A34A);          // Success
+  static const Color warning = Color(0xFFF59E0B);          // Warning
+  static const Color error = Color(0xFFDC2626);            // Error
+  static const Color info = Color(0xFF0284C7);             // Info
+  static const Color neutral = Color(0xFFCBD5E1);          // Neutral
+
+  // ── Neutral surfaces (DESIGN.md: #247-253) ──
+  static const Color dark = Color(0xFF0F172A);             // Dark / text-primary
+  static const Color darkSurface = Color(0xFF172033);      // Dark Surface
+  static const Color surface = Color(0xFFFFFFFF);           // Surface (card/modal)
+  static const Color background = Color(0xFFF8FAFC);        // Background
+  static const Color textPrimary = Color(0xFF0F172A);      // Text Primary
+  static const Color textSecondary = Color(0xFF64748B);    // Text Secondary
+  static const Color textMuted = Color(0xFF94A3B8);        // Text Muted
+  static const Color textOnDark = Color(0xFFF8FAFC);       // Text on Dark
+  static const Color borderSubtle = Color(0xFFE2E8F0);     // Border subtle
+
+  // ── Aliases để tương thích code cũ (DEPRECATED — dùng tên DESIGN.md) ──
+  static const Color onSurface = dark;
+  static const Color onSurfaceVariant = textSecondary;
+  static const Color onPrimary = surface;
+  static const Color onSecondary = surface;
+  static const Color onError = surface;
+  static const Color cardBorder = borderSubtle;
+  static const Color cardDivider = Color(0xFFF1F5F9);
+  static const Color inputBorder = neutral;
   static const Color outline = Color(0xFF74777F);
   static const Color outlineVariant = Color(0xFFC4C6CF);
-  static const Color surfaceTint = Color(0xFF455F88);
+  static const Color surfaceContainerLowest = surface;
+  static const Color surfaceContainerLow = Color(0xFFF8FAFC);
+  static const Color surfaceContainer = Color(0xFFF1F5F9);
+  static const Color surfaceContainerHigh = Color(0xFFE2E8F0);
+  static const Color surfaceContainerHighest = Color(0xFFE2E8F0);
+  static const Color surfaceDim = Color(0xFFE2E8F0);
+  static const Color surfaceBright = surface;
 
-  // Primary — Sale side (Deep Blue)
-  static const Color primary = Color(0xFF002045);
-  static const Color onPrimary = Color(0xFFFFFFFF);
-  static const Color primaryContainer = Color(0xFF1A365D);
-  static const Color onPrimaryContainer = Color(0xFF86A0CD);
-  static const Color inversePrimary = Color(0xFFADC7F7);
-  static const Color primaryFixed = Color(0xFFD6E3FF);
-  static const Color primaryFixedDim = Color(0xFFADC7F7);
-  static const Color onPrimaryFixed = Color(0xFF001B3C);
-  static const Color onPrimaryFixedVariant = Color(0xFF2D476F);
+  // ── Container variants ──
+  static const Color primaryContainer = primary;
+  static const Color secondaryContainer = trustTeal;
+  static const Color errorContainer = Color(0x1ADC2626);
+  static const Color tertiaryContainer = info;
+  static const Color onPrimaryContainer = surface;
+  static const Color onSecondaryContainer = surface;
+  static const Color onErrorContainer = surface;
+  static const Color onTertiaryContainer = surface;
 
-  // Secondary — Trade side (Teal/Emerald)
-  static const Color secondary = Color(0xFF1B6B51);
-  static const Color onSecondary = Color(0xFFFFFFFF);
-  static const Color secondaryContainer = Color(0xFFA6F2D1);
-  static const Color onSecondaryContainer = Color(0xFF237157);
-  static const Color secondaryFixed = Color(0xFFA6F2D1);
-  static const Color secondaryFixedDim = Color(0xFF8BD6B6);
-  static const Color onSecondaryFixed = Color(0xFF002116);
-  static const Color onSecondaryFixedVariant = Color(0xFF00513B);
+  // ── M3 required ──
+  static const Color secondary = trustTeal;
+  static const Color tertiary = info;
+  static const Color onTertiary = surface;
+  static const Color inverseSurface = darkSurface;
+  static const Color inversePrimary = Color(0xFF93BBFF);
+  static const Color onInverseSurface = textOnDark;
+  static const Color surfaceTint = primary;
 
-  // Tertiary — Action/Info
-  static const Color tertiary = Color(0xFF002336);
-  static const Color onTertiary = Color(0xFFFFFFFF);
-  static const Color tertiaryContainer = Color(0xFF003A55);
-  static const Color onTertiaryContainer = Color(0xFF1BA9ED);
-  static const Color tertiaryFixed = Color(0xFFC9E6FF);
-  static const Color tertiaryFixedDim = Color(0xFF89CEFF);
-  static const Color onTertiaryFixed = Color(0xFF001E2F);
-  static const Color onTertiaryFixedVariant = Color(0xFF004C6E);
-
-  // Error
-  static const Color error = Color(0xFFBA1A1A);
-  static const Color onError = Color(0xFFFFFFFF);
-  static const Color errorContainer = Color(0xFFFFDAD6);
-  static const Color onErrorContainer = Color(0xFF93000A);
-
-  // Functional semantic colors
-  static const Color saleBlue = Color(0xFF1A365D);
-  static const Color tradeTeal = Color(0xFF065F46);
-  static const Color actionBlue = Color(0xFF0EA5E9);
-  static const Color disputeRed = Color(0xFFBA1A1A);
-  static const Color escrowAmber = Color(0xFFF59E0B);
-  static const Color successGreen = Color(0xFF16A34A);
-
-  // Component-specific
-  static const Color cardBorder = Color(0xFFE2E8F0);
-  static const Color cardDivider = Color(0xFFF1F5F9);
-  static const Color inputBorder = Color(0xFFCBD5E1);
+  // ── Gradient helpers ──
+  static const Color saleBlue = primary;
+  static const Color tradeTeal = trustTeal;
+  static const Color actionBlue = info;
+  static const Color disputeRed = error;
+  static const Color escrowAmber = warning;
+  static const Color successGreen = success;
 }
 
 // ──────────────────────────────────────────────
@@ -100,6 +105,15 @@ class TradeLinkTypography {
       headlineLarge: base.headlineLarge?.copyWith(
         fontSize: 20, fontWeight: FontWeight.w600, color: colorScheme.onSurface,
       ),
+      // ── Hero money display — tabular-nums bắt buộc cho financial ledger ──
+      headlineMedium: base.headlineMedium?.copyWith(
+        fontSize: 32, fontWeight: FontWeight.w700,
+        letterSpacing: -0.02 * 32, color: colorScheme.onSurface,
+      ),
+      titleLarge: base.titleLarge?.copyWith(
+        fontSize: 28, fontWeight: FontWeight.w700,
+        letterSpacing: -0.01 * 28, color: colorScheme.onSurface,
+      ),
       bodyLarge: base.bodyLarge?.copyWith(
         fontSize: 18, fontWeight: FontWeight.w400, color: colorScheme.onSurface,
       ),
@@ -117,6 +131,104 @@ class TradeLinkTypography {
       ),
     );
   }
+
+  // ── Money text — áp dụng tabular-nums cho mọi số tiền (DESIGN.md line 136) ──
+  static const List<FontFeature> _tabularNums = [FontFeature.tabularFigures()];
+
+  /// Standard money display — DESIGN.md price token (20px/700)
+  static TextStyle money({Color color = TradeLinkColors.primary}) {
+    return TextStyle(
+      fontSize: 20,
+      fontWeight: FontWeight.w700,
+      color: color,
+      letterSpacing: -0.01 * 20,
+      fontFeatures: _tabularNums,
+      height: 1.3,
+    );
+  }
+
+  /// Hero money display — 28px/700 (cho detail/escrow)
+  static TextStyle moneyLarge({Color color = TradeLinkColors.primary}) {
+    return TextStyle(
+      fontSize: 28,
+      fontWeight: FontWeight.w700,
+      color: color,
+      letterSpacing: -0.015 * 28,
+      fontFeatures: _tabularNums,
+      height: 1.2,
+    );
+  }
+
+  /// Compact money display — 16px/600 (cho list item)
+  static TextStyle moneyCompact({Color color = TradeLinkColors.primary}) {
+    return TextStyle(
+      fontSize: 16,
+      fontWeight: FontWeight.w600,
+      color: color,
+      fontFeatures: _tabularNums,
+      height: 1.3,
+    );
+  }
+}
+
+// ──────────────────────────────────────────────
+// Text helper — bọc money Text an toàn với tabular-nums
+// ──────────────────────────────────────────────
+
+/// Helper để render số tiền với tabular-nums bắt buộc.
+/// Dùng: TradeLinkText.money('1.500.000 đ', color: saleBlue)
+class TradeLinkText extends StatelessWidget {
+  final String data;
+  final TextStyle? style;
+  final TextAlign? textAlign;
+  final int? maxLines;
+  final TextOverflow? overflow;
+
+  const TradeLinkText(
+    this.data, {
+    super.key,
+    this.style,
+    this.textAlign,
+    this.maxLines,
+    this.overflow,
+  });
+
+  /// Render số tiền với tabular-nums (DESIGN.md yêu cầu cho mọi giá trị tiền tệ).
+  /// size: 'compact' (16px), 'base' (20px, default), 'large' (28px)
+  static Widget money(
+    String amount, {
+    Key? key,
+    Color color = TradeLinkColors.primary,
+    String size = 'base',
+    TextAlign? textAlign,
+    int? maxLines,
+    TextOverflow? overflow,
+  }) {
+    final style = switch (size) {
+      'compact' => TradeLinkTypography.moneyCompact(color: color),
+      'large' => TradeLinkTypography.moneyLarge(color: color),
+      _ => TradeLinkTypography.money(color: color),
+    };
+    return Text(
+      amount,
+      key: key,
+      style: style,
+      textAlign: textAlign,
+      maxLines: maxLines,
+      overflow: overflow,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      data,
+      style: style,
+      textAlign: textAlign,
+      maxLines: maxLines,
+      overflow: overflow,
+    );
+  }
 }
 
 // ──────────────────────────────────────────────
@@ -132,6 +244,7 @@ class TradeLinkSpacing {
   static const double lg = 24;
   static const double xl = 32;
   static const double xxl = 48;
+  static const double huge = 64;
   static const double gutter = 24;
   static const double marginMobile = 16;
   static const double marginDesktop = 48;
@@ -140,17 +253,60 @@ class TradeLinkSpacing {
 }
 
 // ──────────────────────────────────────────────
-// Border Radius
+// Shadows — DESIGN.md #310-321
+// ──────────────────────────────────────────────
+
+/// Soft, highly diffused shadows theo DESIGN.md.
+class TradeLinkShadow {
+  TradeLinkShadow._();
+
+  /// Small — chip, input, card compact
+  static const List<BoxShadow> small = [
+    BoxShadow(
+      color: Color(0x0D0F172A), // rgba(15, 23, 42, 0.05)
+      offset: Offset(0, 1),
+      blurRadius: 2,
+      spreadRadius: 0,
+    ),
+  ];
+
+  /// Medium — card default, bottom sheet, dropdown
+  static const List<BoxShadow> medium = [
+    BoxShadow(
+      color: Color(0x140F172A), // rgba(15, 23, 42, 0.08)
+      offset: Offset(0, 4),
+      blurRadius: 12,
+      spreadRadius: 0,
+    ),
+  ];
+
+  /// Large — modal, panel nổi
+  static const List<BoxShadow> large = [
+    BoxShadow(
+      color: Color(0x1F0F172A), // rgba(15, 23, 42, 0.12)
+      offset: Offset(0, 12),
+      blurRadius: 32,
+      spreadRadius: 0,
+    ),
+  ];
+
+  /// Legacy — deprecated (giữ tương thích)
+  static const List<BoxShadow> surface2 = large;
+  static const List<BoxShadow> subtle = small;
+}
+
+// ──────────────────────────────────────────────
+// Border Radius — DESIGN.md #324-339
 // ──────────────────────────────────────────────
 
 class TradeLinkRadii {
   TradeLinkRadii._();
-  static const double sm = 2;
-  static const double base = 4;
-  static const double md = 6;
-  static const double lg = 8;
-  static const double xl = 12;
-  static const double full = 9999;
+  static const double xs = 4;     // DESIGN.md: xs = 4px
+  static const double sm = 8;     // DESIGN.md: sm = 8px (chip, thumbnail)
+  static const double md = 12;    // DESIGN.md: md = 12px (input, card compact)
+  static const double lg = 16;    // DESIGN.md: lg = 16px (card, bottom sheet)
+  static const double xl = 20;    // DESIGN.md: xl = 20px (elevated card, modal)
+  static const double full = 9999; // Pill
 }
 
 // ──────────────────────────────────────────────
@@ -193,7 +349,7 @@ class AppTheme {
       outlineVariant: TradeLinkColors.outlineVariant,
       inverseSurface: TradeLinkColors.inverseSurface,
       inversePrimary: TradeLinkColors.inversePrimary,
-      onInverseSurface: TradeLinkColors.inverseOnSurface,
+      onInverseSurface: TradeLinkColors.onInverseSurface,
       shadow: Color(0xFF000000),
       scrim: Color(0xFF000000),
     );
@@ -231,19 +387,19 @@ class AppTheme {
         horizontal: TradeLinkSpacing.md, vertical: TradeLinkSpacing.sm,
       ),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(TradeLinkRadii.base),
+        borderRadius: BorderRadius.circular(TradeLinkRadii.xs),
         borderSide: const BorderSide(color: TradeLinkColors.inputBorder, width: 1),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(TradeLinkRadii.base),
+        borderRadius: BorderRadius.circular(TradeLinkRadii.xs),
         borderSide: const BorderSide(color: TradeLinkColors.inputBorder, width: 1),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(TradeLinkRadii.base),
+        borderRadius: BorderRadius.circular(TradeLinkRadii.xs),
         borderSide: const BorderSide(color: TradeLinkColors.actionBlue, width: 2),
       ),
       errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(TradeLinkRadii.base),
+        borderRadius: BorderRadius.circular(TradeLinkRadii.xs),
         borderSide: const BorderSide(color: TradeLinkColors.error, width: 1),
       ),
     ),
@@ -252,7 +408,7 @@ class AppTheme {
         backgroundColor: TradeLinkColors.primaryContainer,
         foregroundColor: TradeLinkColors.onPrimary,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(TradeLinkRadii.base),
+          borderRadius: BorderRadius.circular(TradeLinkRadii.xs),
         ),
         padding: const EdgeInsets.symmetric(
           horizontal: TradeLinkSpacing.lg, vertical: TradeLinkSpacing.md,
@@ -265,7 +421,7 @@ class AppTheme {
         foregroundColor: TradeLinkColors.primaryContainer,
         side: const BorderSide(color: TradeLinkColors.primaryContainer),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(TradeLinkRadii.base),
+          borderRadius: BorderRadius.circular(TradeLinkRadii.xs),
         ),
         padding: const EdgeInsets.symmetric(
           horizontal: TradeLinkSpacing.lg, vertical: TradeLinkSpacing.md,

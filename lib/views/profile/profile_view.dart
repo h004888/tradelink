@@ -1,9 +1,16 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../core/ui_state.dart';
 import '../../models/profile_model.dart';
 import '../../utils/theme.dart';
 import '../../viewmodels/profile_viewmodel.dart';
+import '../../widgets/empty_state.dart';
+import '../../widgets/tradelink_app_bar.dart';
+import '../../widgets/tradelink_card.dart';
+import '../../widgets/user_reviews_section.dart';
 
 class ProfileView extends StatelessWidget {
   const ProfileView({super.key});
@@ -26,23 +33,29 @@ class _ProfileBody extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: TradeLinkColors.surface,
-      appBar: AppBar(
-        title: const Text('Hồ sơ cá nhân'),
+      appBar: TradeLinkAppBar(
+        title: 'Hồ sơ cá nhân',
         actions: [
-          IconButton(icon: const Icon(Icons.settings_outlined), onPressed: () => vm.navigateToSettings(context)),
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => vm.navigateToSettings(context),
+          ),
         ],
       ),
       body: switch (vm.state) {
-        Loading() => const Center(child: CircularProgressIndicator()),
-        Error(message: final msg) => Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(msg, style: const TextStyle(color: TradeLinkColors.error)),
-                const SizedBox(height: TradeLinkSpacing.md),
-                ElevatedButton(onPressed: vm.loadProfile, child: const Text('Thử lại')),
-              ],
+        Loading() => const Center(
+            child: SizedBox(
+              width: 28,
+              height: 28,
+              child: CircularProgressIndicator(strokeWidth: 2),
             ),
+          ),
+        Error(message: final msg) => EmptyState(
+            icon: Icons.cloud_off_outlined,
+            title: 'Không tải được hồ sơ',
+            message: msg,
+            actionLabel: 'Thử lại',
+            onAction: vm.loadProfile,
           ),
         Success(data: final profile) => _buildProfile(context, vm, profile),
         _ => const SizedBox.shrink(),
@@ -55,55 +68,145 @@ class _ProfileBody extends StatelessWidget {
       padding: const EdgeInsets.all(TradeLinkSpacing.marginMobile),
       child: Column(
         children: [
-          // Avatar + Name
-          const SizedBox(height: TradeLinkSpacing.lg),
+          const SizedBox(height: TradeLinkSpacing.md),
+          // Avatar with reputation border
           Container(
-            width: 88, height: 88,
+            width: 96,
+            height: 96,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: TradeLinkColors.surfaceContainerHigh,
-              border: Border.all(color: _reputationColor(profile.reputationScore), width: 3),
+              border: Border.all(
+                color: _reputationColor(profile.reputationScore),
+                width: 3,
+              ),
             ),
-            child: const Icon(Icons.person, size: 48, color: TradeLinkColors.onSurfaceVariant),
+            alignment: Alignment.center,
+            child: const Icon(
+              Icons.person_outline,
+              size: 48,
+              color: TradeLinkColors.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: TradeLinkSpacing.md),
-          Text(profile.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: TradeLinkColors.onSurface)),
-          Text(profile.address ?? '', style: const TextStyle(fontSize: 14, color: TradeLinkColors.onSurfaceVariant)),
+          Text(
+            profile.name,
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          if (profile.address?.isNotEmpty == true) ...[
+            const SizedBox(height: TradeLinkSpacing.xs),
+            Text(
+              profile.address!,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: TradeLinkColors.onSurfaceVariant,
+                  ),
+            ),
+          ],
           const SizedBox(height: TradeLinkSpacing.md),
-          // Reputation Badge
+          // Reputation Badge — prominent style for trust signal
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: TradeLinkSpacing.sm, vertical: TradeLinkSpacing.base),
+            padding: const EdgeInsets.symmetric(
+              horizontal: TradeLinkSpacing.md,
+              vertical: TradeLinkSpacing.xs,
+            ),
             decoration: BoxDecoration(
               color: _reputationColor(profile.reputationScore).withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(TradeLinkRadii.full),
+              border: Border.all(
+                color: _reputationColor(profile.reputationScore).withValues(alpha: 0.3),
+              ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.star, size: 16, color: _reputationColor(profile.reputationScore)),
-                const SizedBox(width: 4),
-                Text('${profile.reputationScore} điểm • Hạng ${profile.reputationTier}',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: _reputationColor(profile.reputationScore))),
+                Icon(
+                  Icons.star_rounded,
+                  size: 18,
+                  color: _reputationColor(profile.reputationScore),
+                ),
+                const SizedBox(width: TradeLinkSpacing.xs),
+                Text(
+                  '${profile.reputationScore} điểm • Hạng ${profile.reputationTier}',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: _reputationColor(profile.reputationScore),
+                        letterSpacing: 0.2,
+                      ),
+                ),
               ],
             ),
           ),
           const SizedBox(height: TradeLinkSpacing.lg),
-          // Stats row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _statItem('${profile.totalTransactions}', 'Giao dịch'),
-              _statItem('${profile.successRate}%', 'Thành công'),
-              _statItem('${profile.totalListings}', 'Tin đăng'),
-            ],
+          // Stats row — TradeLinkCard
+          TradeLinkCard(
+            padding: const EdgeInsets.symmetric(
+              horizontal: TradeLinkSpacing.md,
+              vertical: TradeLinkSpacing.md,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _statItem(context, '${profile.totalTransactions}', 'Giao dịch'),
+                Container(
+                  width: 1,
+                  height: 32,
+                  color: TradeLinkColors.cardDivider,
+                ),
+                _statItem(context, '${profile.successRate}%', 'Thành công'),
+                Container(
+                  width: 1,
+                  height: 32,
+                  color: TradeLinkColors.cardDivider,
+                ),
+                _statItem(context, '${profile.totalListings}', 'Tin đăng'),
+              ],
+            ),
           ),
           const SizedBox(height: TradeLinkSpacing.lg),
           // Menu items
-          _menuItem(Icons.list_alt, 'Tin đăng của tôi', () => vm.navigateToMyListings(context)),
-          _menuItem(Icons.edit, 'Chỉnh sửa hồ sơ', () => vm.navigateToEditProfile(context)),
-          _menuItem(Icons.notifications_outlined, 'Thông báo', () {}),
-          const Divider(height: TradeLinkSpacing.xl),
-          _menuItem(Icons.logout, 'Đăng xuất', () => vm.logout(context), isDestructive: true),
+          TradeLinkCard(
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
+                _menuItem(
+                  context,
+                  Icons.list_alt_outlined,
+                  'Tin đăng của tôi',
+                  onTap: () => vm.navigateToMyListings(context),
+                ),
+                const Divider(height: 1, indent: 56, color: TradeLinkColors.cardDivider),
+                _menuItem(
+                  context,
+                  Icons.edit_outlined,
+                  'Chỉnh sửa hồ sơ',
+                  onTap: () => vm.navigateToEditProfile(context),
+                ),
+                const Divider(height: 1, indent: 56, color: TradeLinkColors.cardDivider),
+                _menuItem(
+                  context,
+                  Icons.notifications_outlined,
+                  'Thông báo',
+                  onTap: () {},
+                ),
+                const Divider(height: 1, indent: 56, color: TradeLinkColors.cardDivider),
+                _menuItem(
+                  context,
+                  Icons.logout,
+                  'Đăng xuất',
+                  onTap: () => vm.logout(context),
+                  isDestructive: true,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: TradeLinkSpacing.lg),
+          // Public reviews section
+          UserReviewsSection(userId: profile.id),
+          const SizedBox(height: TradeLinkSpacing.md),
         ],
       ),
     );
@@ -116,23 +219,51 @@ class _ProfileBody extends StatelessWidget {
     return TradeLinkColors.onSurfaceVariant;
   }
 
-  Widget _statItem(String value, String label) {
+  Widget _statItem(BuildContext context, String value, String label) {
     return Column(
       children: [
-        Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: TradeLinkColors.onSurface)),
+        Text(
+          value,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+        ),
         const SizedBox(height: 4),
-        Text(label, style: const TextStyle(fontSize: 12, color: TradeLinkColors.onSurfaceVariant)),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: TradeLinkColors.onSurfaceVariant,
+              ),
+        ),
       ],
     );
   }
 
-  Widget _menuItem(IconData icon, String title, VoidCallback onTap, {bool isDestructive = false}) {
+  Widget _menuItem(
+    BuildContext context,
+    IconData icon,
+    String title, {
+    required VoidCallback onTap,
+    bool isDestructive = false,
+  }) {
+    final color = isDestructive ? TradeLinkColors.error : TradeLinkColors.onSurface;
     return ListTile(
-      leading: Icon(icon, color: isDestructive ? TradeLinkColors.error : TradeLinkColors.onSurfaceVariant),
-      title: Text(title, style: TextStyle(color: isDestructive ? TradeLinkColors.error : TradeLinkColors.onSurface, fontSize: 16)),
-      trailing: const Icon(Icons.chevron_right, size: 20, color: TradeLinkColors.onSurfaceVariant),
+      leading: Icon(icon, color: color),
+      title: Text(
+        title,
+        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w500,
+            ),
+      ),
+      trailing: Icon(
+        Icons.chevron_right,
+        size: 20,
+        color: TradeLinkColors.onSurfaceVariant,
+      ),
       onTap: onTap,
-      contentPadding: EdgeInsets.zero,
     );
   }
 }

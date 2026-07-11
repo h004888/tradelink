@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
+import '../../core/result.dart';
 import '../../core/ui_state.dart';
+import '../../repositories/review_repository.dart';
 
 class ReviewViewModel extends ChangeNotifier {
+  final ReviewRepository _repository = ReviewRepository();
   final String transactionId;
+  final String targetId;
+
+  ReviewViewModel({required this.transactionId, required this.targetId});
 
   UiState<void> _state = const Idle();
   UiState<void> get state => _state;
@@ -15,18 +21,47 @@ class ReviewViewModel extends ChangeNotifier {
   String _comment = '';
   String get comment => _comment;
 
-  ReviewViewModel({required this.transactionId});
-
   void setRating(int v) { _rating = v; notifyListeners(); }
   void setCommunication(int v) { _communication = v; notifyListeners(); }
   void setPunctuality(int v) { _punctuality = v; notifyListeners(); }
   void setQuality(int v) { _quality = v; notifyListeners(); }
   void setComment(String v) { _comment = v; }
 
+  String? validate() {
+    if (_rating == 0) return 'Vui lòng chọn đánh giá tổng';
+    if (_communication == 0) return 'Vui lòng đánh giá giao tiếp';
+    if (_punctuality == 0) return 'Vui lòng đánh giá đúng hẹn';
+    if (_quality == 0) return 'Vui lòng đánh giá chất lượng';
+    return null;
+  }
+
   Future<bool> submit() async {
-    _state = const Loading(); notifyListeners();
-    await Future.delayed(const Duration(seconds: 1));
-    _state = const Success(null); notifyListeners();
-    return true;
+    final v = validate();
+    if (v != null) {
+      _state = Error(message: v, retryable: false);
+      notifyListeners();
+      return false;
+    }
+    _state = const Loading();
+    notifyListeners();
+    final res = await _repository.submitReview(
+      transactionId: transactionId,
+      targetId: targetId,
+      rating: _rating,
+      communication: _communication,
+      punctuality: _punctuality,
+      quality: _quality,
+      comment: _comment.isNotEmpty ? _comment : null,
+    );
+    switch (res) {
+      case ResultSuccess<bool>():
+        _state = const Success(null);
+        notifyListeners();
+        return true;
+      case FailureResult<bool>(:final failure):
+        _state = Error(message: failure.message, retryable: true);
+        notifyListeners();
+        return false;
+    }
   }
 }

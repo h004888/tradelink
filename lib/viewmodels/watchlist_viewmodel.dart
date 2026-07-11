@@ -1,23 +1,46 @@
 import 'package:flutter/material.dart';
 import '../../core/result.dart';
 import '../../models/listing_model.dart';
-import '../../repositories/search_repository.dart';
+import '../../repositories/watchlist_repository.dart';
 
 class WatchlistViewModel extends ChangeNotifier {
-  final SearchRepository _repository = SearchRepository();
+  final WatchlistRepository _repository = WatchlistRepository();
+
   final List<Listing> _items = [];
   List<Listing> get items => _items;
   bool get isEmpty => _items.isEmpty;
+  bool _loading = false;
+  bool get isLoading => _loading;
+  String? _errorMessage;
+  String? get errorMessage => _errorMessage;
 
   Future<void> load() async {
-    final result = await _repository.search();
+    _loading = true;
+    _errorMessage = null;
+    notifyListeners();
+    final result = await _repository.getAll();
     if (result is ResultSuccess<List<Listing>>) {
-      // Mock: first 3 items as saved
-      _items.clear();
-      _items.addAll(result.data.take(3));
+      _items
+        ..clear()
+        ..addAll(result.data);
+    } else if (result is FailureResult<List<Listing>>) {
+      _errorMessage = (result).failure.message;
+    }
+    _loading = false;
+    notifyListeners();
+  }
+
+  Future<void> remove(String listingId) async {
+    final res = await _repository.unsave(listingId);
+    if (res is ResultSuccess<bool>) {
+      _items.removeWhere((l) => l.id == listingId);
       notifyListeners();
     }
   }
 
-  void remove(int index) { _items.removeAt(index); notifyListeners(); }
+  Future<bool> toggleSave(String listingId, bool currentlySaved) async {
+    final res = currentlySaved ? await _repository.unsave(listingId) : await _repository.save(listingId);
+    if (res is ResultSuccess<bool>) return !currentlySaved;
+    return currentlySaved;
+  }
 }

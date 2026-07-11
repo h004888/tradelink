@@ -13,9 +13,15 @@ class AppPaths {
   static const String splash = '/';
   static const String onboarding = '/onboarding';
   static const String login = '/login';
-  static const String otpVerification = '/otp-verification';
+  static const String register = '/register';
   static const String profile = '/profile';
   static const String editProfile = '/profile/edit';
+  static const String changePassword = '/profile/change-password';
+  static const String forgotPassword = '/auth/forgot-password';
+  static const String resetPassword = '/auth/reset-password';
+  static const String verifyEmail = '/auth/verify-email';
+  static const String verifyPrompt = '/auth/verify-prompt';
+  static const String settings = '/profile/settings';
 
   // TV2 — Post Management
   static const String createListing = '/listings/create';
@@ -27,13 +33,18 @@ class AppPaths {
 
   // TV3 — Search & Negotiation
   static const String home = '/home';
+  static const String chatList = '/chat';
+  static const String category = '/category';
   static const String search = '/search';
   static const String itemDetail = '/items/detail';          // + :id
+  static const String sellerProfile = '/users/profile';       // + :userId
   static const String chat = '/chat';                        // + :conversationId
   static const String watchlist = '/watchlist';
   static const String sendOffer = '/offers/send';            // + :listingId
+  static const String offersList = '/offers/list';
 
   // TV4 — Transactions & Admin
+  static const String transactions = '/transactions';
   static const String transactionSale = '/transactions/sale';    // + :id
   static const String transactionTrade = '/transactions/trade';  // + :id
   static const String createOrder = '/orders/create';            // + :listingId
@@ -41,6 +52,8 @@ class AppPaths {
   static const String dispute = '/disputes';                     // + :transactionId
   static const String review = '/review';                        // + :transactionId
   static const String admin = '/admin';
+  static const String adminUsers = '/admin/users';
+  static const String adminTransactions = '/admin/transactions';
 }
 
 class AppDurations {

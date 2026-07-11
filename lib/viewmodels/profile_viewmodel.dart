@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/api_client.dart';
 import '../../core/result.dart';
 import '../../core/ui_state.dart';
 import '../../models/profile_model.dart';
+import '../../repositories/auth_repository.dart';
 import '../../repositories/profile_repository.dart';
 import '../../utils/constants.dart';
 
@@ -12,7 +14,11 @@ class ProfileViewModel extends ChangeNotifier {
   UiState<Profile> _state = const Loading();
   UiState<Profile> get state => _state;
 
-  Profile? get profile => _state is Success<Profile> ? (_state as Success<Profile>).data : null;
+  Profile? get profile {
+    final s = _state;
+    if (s is Success<Profile>) return s.data;
+    return null;
+  }
 
   ProfileViewModel() {
     loadProfile();
@@ -23,11 +29,10 @@ class ProfileViewModel extends ChangeNotifier {
     notifyListeners();
 
     final result = await _repository.getProfile();
-    switch (result) {
-      case ResultSuccess(data: final profile):
-        _state = Success(profile);
-      case FailureResult(failure: final failure):
-        _state = Error(message: failure.message, retryable: true);
+    if (result is ResultSuccess<Profile>) {
+      _state = Success(result.data);
+    } else if (result is FailureResult<Profile>) {
+      _state = Error(message: (result).failure.message, retryable: true);
     }
     notifyListeners();
   }
@@ -44,7 +49,10 @@ class ProfileViewModel extends ChangeNotifier {
     // TODO: Settings screen
   }
 
-  void logout(BuildContext context) {
-    context.go(AppPaths.login);
+  Future<void> logout(BuildContext context) async {
+    // Gọi API logout (optional — để backend track), rồi clear token local + navigate
+    await AuthRepository().logout();
+    await ApiClient.instance.clearTokens();
+    if (context.mounted) context.go(AppPaths.login);
   }
 }

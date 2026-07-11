@@ -1,55 +1,139 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../core/ui_state.dart';
 import '../../repositories/notification_repository.dart';
 import '../../utils/theme.dart';
 import '../../viewmodels/notifications_viewmodel.dart';
+import '../../widgets/empty_state.dart';
+import '../../widgets/loading_skeleton.dart';
+import '../../widgets/tradelink_app_bar.dart';
+import '../../widgets/tradelink_card.dart';
 
 class NotificationsView extends StatelessWidget {
   const NotificationsView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(create: (_) => NotificationsViewModel(), child: const _Body());
+    return ChangeNotifierProvider(
+      create: (_) => NotificationsViewModel(),
+      child: const _Body(),
+    );
   }
 }
 
 class _Body extends StatelessWidget {
   const _Body();
 
-  IconData _icon(NotificationType t) => switch (t) { NotificationType.transaction => Icons.swap_horiz, NotificationType.chat => Icons.chat_outlined, NotificationType.dispute => Icons.warning_outlined, NotificationType.system => Icons.info_outlined, };
+  IconData _icon(NotificationType t) => switch (t) {
+        NotificationType.transaction => Icons.swap_horiz,
+        NotificationType.chat => Icons.chat_bubble_outline,
+        NotificationType.dispute => Icons.warning_amber_outlined,
+        NotificationType.system => Icons.info_outline,
+      };
+
+  Color _color(NotificationType t) => switch (t) {
+        NotificationType.transaction => TradeLinkColors.tradeTeal,
+        NotificationType.chat => TradeLinkColors.actionBlue,
+        NotificationType.dispute => TradeLinkColors.disputeRed,
+        NotificationType.system => TradeLinkColors.onSurfaceVariant,
+      };
 
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<NotificationsViewModel>();
+    final theme = Theme.of(context);
 
     return Scaffold(
       backgroundColor: TradeLinkColors.surface,
-      appBar: AppBar(title: const Text('Thông báo')),
+      appBar: const TradeLinkAppBar(
+        title: 'Thông báo',
+        subtitle: 'Cập nhật giao dịch và tin nhắn',
+      ),
       body: switch (vm.state) {
-        Loading() => const Center(child: CircularProgressIndicator()),
-        Error(message: final m) => Center(child: Text(m)),
-        Success(data: final list) => ListView.separated(
-            padding: const EdgeInsets.all(TradeLinkSpacing.marginMobile),
-            itemCount: list.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 4),
-            itemBuilder: (_, i) {
-              final n = list[i];
-              return Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: n.isRead ? TradeLinkColors.surfaceContainerLowest : TradeLinkColors.primaryFixedDim.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(TradeLinkRadii.lg)),
-                child: Row(children: [
-                  Icon(_icon(n.type), color: TradeLinkColors.primaryContainer, size: 24),
-                  const SizedBox(width: 12),
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(n.title, style: TextStyle(fontWeight: n.isRead ? FontWeight.w400 : FontWeight.w700, fontSize: 15)),
-                    const SizedBox(height: 2),
-                    Text(n.body, style: const TextStyle(fontSize: 13, color: TradeLinkColors.onSurfaceVariant), maxLines: 2, overflow: TextOverflow.ellipsis),
-                  ])),
-                ]),
-              );
-            },
+        Loading() => const LoadingSkeleton.list(itemCount: 6),
+        Error(message: final m) => EmptyState(
+            icon: Icons.notifications_off_outlined,
+            title: 'Không tải được thông báo',
+            message: m,
+            actionLabel: 'Thử lại',
+            onAction: vm.load,
           ),
+        Success(data: final list) => list.isEmpty
+            ? EmptyState(
+                icon: Icons.notifications_none_outlined,
+                title: 'Chưa có thông báo',
+                message: 'Thông báo về giao dịch, tin nhắn và cập nhật hệ thống sẽ hiển thị ở đây.',
+              )
+            : ListView.separated(
+                padding: const EdgeInsets.all(TradeLinkSpacing.marginMobile),
+                itemCount: list.length,
+                separatorBuilder: (_, __) =>
+                    const SizedBox(height: TradeLinkSpacing.sm),
+                itemBuilder: (_, i) {
+                  final n = list[i];
+                  final color = _color(n.type);
+                  return TradeLinkCard(
+                    padding: const EdgeInsets.all(TradeLinkSpacing.md),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: color.withValues(alpha: n.isRead ? 0.06 : 0.12),
+                            shape: BoxShape.circle,
+                          ),
+                          alignment: Alignment.center,
+                          child: Icon(_icon(n.type), color: color, size: 22),
+                        ),
+                        const SizedBox(width: TradeLinkSpacing.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      n.title,
+                                      style: theme.textTheme.bodyMedium?.copyWith(
+                                        fontWeight: n.isRead
+                                            ? FontWeight.w500
+                                            : FontWeight.w700,
+                                        color: TradeLinkColors.onSurface,
+                                      ),
+                                    ),
+                                  ),
+                                  if (!n.isRead)
+                                    Container(
+                                      width: 8,
+                                      height: 8,
+                                      decoration: const BoxDecoration(
+                                        color: TradeLinkColors.primaryContainer,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                n.body,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: TradeLinkColors.onSurfaceVariant,
+                                  height: 1.4,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
         _ => const SizedBox.shrink(),
       },
     );

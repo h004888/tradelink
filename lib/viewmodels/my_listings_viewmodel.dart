@@ -13,7 +13,11 @@ class MyListingsViewModel extends ChangeNotifier {
   ListingStatus _filter = ListingStatus.active;
   ListingStatus get filter => _filter;
 
-  List<Listing> get listings => _state is Success<List<Listing>> ? (_state as Success<List<Listing>>).data : [];
+  List<Listing> get listings {
+    final s = _state;
+    if (s is Success<List<Listing>>) return s.data;
+    return const [];
+  }
 
   MyListingsViewModel() { loadListings(); }
 
@@ -21,9 +25,10 @@ class MyListingsViewModel extends ChangeNotifier {
     _state = const Loading();
     notifyListeners();
     final result = await _repository.getMyListings(filter: _filter);
-    switch (result) {
-      case ResultSuccess(data: final list): _state = Success(list.where((l) => l.status != ListingStatus.draft).toList());
-      case FailureResult(failure: final f): _state = Error(message: f.message, retryable: true);
+    if (result is ResultSuccess<List<Listing>>) {
+      _state = Success(result.data.where((l) => l.status != ListingStatus.draft).toList());
+    } else if (result is FailureResult<List<Listing>>) {
+      _state = Error(message: result.failure.message, retryable: true);
     }
     notifyListeners();
   }

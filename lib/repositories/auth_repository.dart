@@ -1,41 +1,108 @@
-import '../../core/failure.dart';
-import '../../core/result.dart';
+import '../core/api_client.dart';
+import '../core/failure.dart';
+import '../core/result.dart';
 
 class AuthRepository {
-  // Mock — will be replaced with real API calls
-  static const String _mockPhone = '0912345678';
-  static const String _mockOtp = '123456';
+  final _api = ApiClient.instance;
 
-  Future<Result<String>> login(String phone) async {
-    await Future.delayed(const Duration(seconds: 1));
-
-    if (phone.isEmpty) {
-      return FailureResult(const ValidationFailure(message: 'Vui lòng nhập số điện thoại'));
-    }
-
-    if (phone.length < 10) {
-      return FailureResult(const ValidationFailure(message: 'Số điện thoại không hợp lệ'));
-    }
-
-    // Mock success — return a fake session ID
-    return const ResultSuccess('session-mock-12345');
+  Future<Result<bool>> register(String email, String password, String name) async {
+    final res = await _api.post('/auth/register', body: {'email': email, 'password': password, 'name': name});
+    return _setTokenFromResult(res);
   }
 
-  Future<Result<bool>> verifyOtp(String sessionId, String otp) async {
-    await Future.delayed(const Duration(seconds: 1));
+  Future<Result<bool>> loginWithPassword(String email, String password) async {
+    final res = await _api.post('/auth/login', body: {'email': email, 'password': password});
+    return _setTokenFromResult(res);
+  }
 
-    if (otp.length != 6) {
-      return FailureResult(const ValidationFailure(message: 'Mã OTP phải có 6 chữ số'));
+  /// Khi token hết hạn, client gọi endpoint /refresh với refreshToken để lấy token mới.
+  /// Backend thực hiện refresh token rotation: token cũ bị vô hiệu, cấp cả access + refresh mới.
+  Future<Result<bool>> refreshToken() async {
+    final oldRefreshToken = _api.getRefreshToken();
+    if (oldRefreshToken == null) {
+      return FailureResult(AuthFailure(message: 'Không có refresh token'));
     }
-
-    if (otp == _mockOtp) {
-      return const ResultSuccess(true);
+    final res = await _api.post('/auth/refresh', body: {'refreshToken': oldRefreshToken});
+    if (res is FailureResult<Map<String, dynamic>>) {
+      // Refresh failed → clear tokens
+      await _api.clearTokens();
+      return FailureResult<bool>((res).failure);
     }
-
-    return FailureResult(const AuthFailure(message: 'Mã OTP không chính xác'));
+    final s = res as ResultSuccess<Map<String, dynamic>>;
+    final data = s.data['data'] as Map;
+    final newToken = data['token'] as String;
+    final newRefreshToken = data['refreshToken'] as String?;
+    await _api.setToken(newToken);
+    if (newRefreshToken != null) {
+      await _api.setRefreshToken(newRefreshToken);
+    }
+    return ResultSuccess<bool>(true);
   }
 
   Future<void> logout() async {
-    // TODO: clear secure storage
+    await _api.post('/auth/logout');
+    await _api.clearTokens();
+  }
+
+  /// Đổi mật khẩu — backend yêu cầu Bearer token, verify mật khẩu cũ và hash mật khẩu mới.
+  Future<Result<bool>> changePassword(String oldPassword, String newPassword) async {
+    final res = await _api.post('/auth/change-password', body: {
+      'oldPassword': oldPassword,
+      'newPassword': newPassword,
+    });
+    return switch (res) {
+      ResultSuccess() => ResultSuccess<bool>(true),
+      FailureResult(failure: final f) => FailureResult<bool>(f),
+    };
+  }
+
+  /// A2 — yêu cầu reset password, trả token (workaround vì chưa có email service)
+  Future<Result<String>> forgotPassword(String email) async {
+    final res = await _api.post('/auth/forgot-password', body: {'email': email});
+    return switch (res) {
+      ResultSuccess(data: final d) => ResultSuccess<String>(
+          ((d['data'] as Map?)?['token'] as String?) ?? '',
+        ),
+      FailureResult(failure: final f) => FailureResult<String>(f),
+    };
+  }
+
+  /// A2 — đặt lại mật khẩu bằng token.
+  Future<Result<bool>> resetPassword(String token, String newPassword) async {
+    final res = await _api.post('/auth/reset-password', body: {
+      'token': token,
+      'newPassword': newPassword,
+    });
+    return switch (res) {
+      ResultSuccess() => ResultSuccess<bool>(true),
+      FailureResult(failure: final f) => FailureResult<bool>(f),
+    };
+  }
+
+  /// A3 — xác nhận email bằng token.
+  Future<Result<bool>> verifyEmail(String token) async {
+    final res = await _api.post('/auth/verify-email', body: {'token': token});
+    return switch (res) {
+      ResultSuccess() => ResultSuccess<bool>(true),
+      FailureResult(failure: final f) => FailureResult<bool>(f),
+    };
+  }
+
+  Future<Result<bool>> _setTokenFromResult(Result<Map<String, dynamic>> res) async {
+    if (res is ResultSuccess<Map<String, dynamic>>) {
+      final data = res.data['data'] as Map;
+      await _api.setToken(data['token'] as String);
+      if (data['refreshToken'] != null) {
+        await _api.setRefreshToken(data['refreshToken'] as String);
+      }
+      if (data['userId'] != null) {
+        await _api.setUserId(data['userId'] as String);
+      } else if (data['user'] is Map) {
+        final userId = (data['user'] as Map)['_id'] as String? ?? (data['user'] as Map)['id'] as String?;
+        if (userId != null) await _api.setUserId(userId);
+      }
+      return ResultSuccess<bool>(true);
+    }
+    return FailureResult<bool>((res as FailureResult<Map<String, dynamic>>).failure);
   }
 }

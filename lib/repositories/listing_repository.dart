@@ -1,71 +1,243 @@
-import '../../core/failure.dart';
-import '../../core/result.dart';
-import '../../models/listing_model.dart';
+import '../core/api_client.dart';
+import '../core/failure.dart';
+import '../core/result.dart';
+import '../models/listing_model.dart';
+
+class HomeData {
+  final List<Listing> featured;
+  final List<Listing> newest;
+  final List<Listing> popular;
+  final List<String> categories;
+  final List<TopSellerInfo> topSellers;
+
+  const HomeData({
+    required this.featured,
+    required this.newest,
+    required this.popular,
+    required this.categories,
+    required this.topSellers,
+  });
+}
+
+class TopSellerInfo {
+  final String sellerId;
+  final String sellerName;
+  final int totalListings;
+  final int totalViews;
+
+  const TopSellerInfo({
+    required this.sellerId,
+    required this.sellerName,
+    required this.totalListings,
+    required this.totalViews,
+  });
+
+  factory TopSellerInfo.fromJson(Map<String, dynamic> json) {
+    return TopSellerInfo(
+      sellerId: json['_id']?.toString() ?? '',
+      sellerName: json['sellerName'] as String? ?? '',
+      totalListings: (json['totalListings'] as num?)?.toInt() ?? 0,
+      totalViews: (json['totalViews'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
 
 class ListingRepository {
-  final List<Listing> _mockListings = [
-    Listing(
-      id: 'lst-001', title: 'Sony A7IV Body', description: 'Máy ảnh mirrorless full-frame, mới 99%, shutter 2000', price: 45000000,
-      imageUrls: ['img1.jpg'], category: 'Điện tử', condition: ItemCondition.likeNew, type: ListingType.sale,
-      status: ListingStatus.active, sellerId: 'user-001', sellerName: 'Nguyễn Minh Khôi',
-      views: 245, interests: 12, saves: 8, createdAt: DateTime.now().subtract(const Duration(days: 7)),
-    ),
-    Listing(
-      id: 'lst-002', title: 'iPhone 15 Pro Max 256GB', description: 'Đổi lấy Samsung S24 Ultra hoặc MacBook', price: null,
-      imageUrls: ['img2.jpg'], category: 'Điện thoại', condition: ItemCondition.likeNew, type: ListingType.trade,
-      status: ListingStatus.active, sellerId: 'user-002', sellerName: 'Trần Văn B',
-      views: 890, interests: 34, saves: 15, createdAt: DateTime.now().subtract(const Duration(days: 3)),
-    ),
-    Listing(
-      id: 'lst-003', title: 'Bàn phím cơ Keychron K8', description: 'Switch Gateron Brown, fullsize, còn box', price: 1200000,
-      imageUrls: ['img3.jpg'], category: 'Phụ kiện', condition: ItemCondition.used, type: ListingType.both,
-      status: ListingStatus.draft, sellerId: 'user-001', sellerName: 'Nguyễn Minh Khôi',
-      views: 0, interests: 0, saves: 0, createdAt: DateTime.now().subtract(const Duration(hours: 5)),
-    ),
-    Listing(
-      id: 'lst-004', title: 'Logitech MX Master 3S', description: 'Chuột không dây, còn bảo hành 6 tháng', price: 1800000,
-      imageUrls: ['img4.jpg'], category: 'Phụ kiện', condition: ItemCondition.likeNew, type: ListingType.sale,
-      status: ListingStatus.sold, sellerId: 'user-001', sellerName: 'Nguyễn Minh Khôi',
-      views: 567, interests: 23, saves: 10, createdAt: DateTime.now().subtract(const Duration(days: 30)),
-    ),
-  ];
+  final _api = ApiClient.instance;
+
+  Listing _fromJson(Map<String, dynamic> j) => Listing(
+        id: j['_id'] as String? ?? j['id'] as String? ?? '',
+        title: j['title'] as String? ?? '',
+        description: j['description'] as String? ?? '',
+        price: (j['price'] as num?)?.toDouble(),
+        imageUrls: (j['imageUrls'] as List?)?.map((e) => e.toString()).toList() ?? const [],
+        category: j['category'] as String? ?? '',
+        condition: _parseCondition(j['condition'] as String?),
+        type: _parseType(j['type'] as String?),
+        status: _parseStatus(j['status'] as String?),
+        sellerId: j['sellerId']?.toString() ?? '',
+        sellerName: j['sellerName'] as String? ?? '',
+        views: (j['views'] as num?)?.toInt() ?? 0,
+        interests: (j['interests'] as num?)?.toInt() ?? 0,
+        saves: (j['saves'] as num?)?.toInt() ?? 0,
+        createdAt: DateTime.tryParse(j['createdAt']?.toString() ?? '') ?? DateTime.now(),
+        boostExpiry: j['boostExpiry'] != null ? DateTime.tryParse(j['boostExpiry'].toString()) : null,
+      );
 
   Future<Result<List<Listing>>> getMyListings({ListingStatus? filter}) async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    var list = _mockListings.where((l) => l.sellerId == 'user-001').toList();
-    if (filter != null) list = list.where((l) => l.status == filter).toList();
-    return ResultSuccess(list);
+    final query = <String, String>{};
+    if (filter != null) query['status'] = filter.name;
+    final res = await _api.get('/listings/my', query: query);
+    return switch (res) {
+      ResultSuccess(data: final d) => ResultSuccess<List<Listing>>(
+          ((d['data'] as List?) ?? []).map((e) => _fromJson(e as Map<String, dynamic>)).toList(),
+        ),
+      FailureResult(failure: final f) => FailureResult<List<Listing>>(f),
+    };
   }
 
   Future<Result<Listing>> getListingById(String id) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    final listing = _mockListings.where((l) => l.id == id).firstOrNull;
-    if (listing == null) return FailureResult(const NotFoundFailure(message: 'Không tìm thấy tin đăng'));
-    return ResultSuccess(listing);
+    final res = await _api.get('/listings/$id');
+    return switch (res) {
+      ResultSuccess(data: final d) => ResultSuccess<Listing>(_fromJson(d['data'] as Map<String, dynamic>)),
+      FailureResult(failure: final f) => FailureResult<Listing>(f),
+    };
   }
 
   Future<Result<Listing>> createListing(Listing listing) async {
-    await Future.delayed(const Duration(seconds: 1));
-    return ResultSuccess(listing);
+    final res = await _api.post('/listings', body: {
+      'title': listing.title,
+      'description': listing.description,
+      'price': listing.price,
+      'imageUrls': listing.imageUrls,
+      'category': listing.category,
+      'condition': listing.condition.name,
+      'type': listing.type.name,
+    });
+    return switch (res) {
+      ResultSuccess(data: final d) => ResultSuccess<Listing>(_fromJson(d['data'] as Map<String, dynamic>)),
+      FailureResult(failure: final f) => FailureResult<Listing>(f),
+    };
   }
 
   Future<Result<Listing>> updateListing(Listing listing) async {
-    await Future.delayed(const Duration(seconds: 1));
-    return ResultSuccess(listing);
+    final res = await _api.put('/listings/${listing.id}', body: {
+      'title': listing.title,
+      'description': listing.description,
+      'price': listing.price,
+      'imageUrls': listing.imageUrls,
+      'category': listing.category,
+      'condition': listing.condition.name,
+      'type': listing.type.name,
+      'status': listing.status.name,
+    });
+    return switch (res) {
+      ResultSuccess(data: final d) => ResultSuccess<Listing>(_fromJson(d['data'] as Map<String, dynamic>)),
+      FailureResult(failure: final f) => FailureResult<Listing>(f),
+    };
+  }
+
+  Future<Result<List<Listing>>> getFeatured({int limit = 10}) async {
+    final res = await _api.get('/home', query: limit != 10 ? {'limit': limit.toString()} : null);
+    if (res.isFailure) return FailureResult<List<Listing>>((res as FailureResult<Map<String, dynamic>>).failure);
+    final d = (res as ResultSuccess<Map<String, dynamic>>).data;
+    final data = d['data'] as Map<String, dynamic>;
+    final list = ((data['featured'] as List?) ?? []).map((e) => _fromJson(e as Map<String, dynamic>)).toList();
+    return ResultSuccess<List<Listing>>(list);
+  }
+
+  /// Load tất cả section cho Home screen
+  Future<Result<HomeData>> getHomeData() async {
+    final res = await _api.get('/home');
+    if (res.isFailure) return FailureResult<HomeData>((res as FailureResult<Map<String, dynamic>>).failure);
+    try {
+      final d = (res as ResultSuccess<Map<String, dynamic>>).data;
+      final data = d['data'] as Map<String, dynamic>?;
+      if (data == null) {
+        return const FailureResult(NetworkFailure(message: 'Dữ liệu home không hợp lệ'));
+      }
+      return ResultSuccess<HomeData>(HomeData(
+        featured: ((data['featured'] as List?) ?? []).map((e) => _fromJson(e as Map<String, dynamic>)).toList(),
+        newest: ((data['newest'] as List?) ?? []).map((e) => _fromJson(e as Map<String, dynamic>)).toList(),
+        popular: ((data['popular'] as List?) ?? []).map((e) => _fromJson(e as Map<String, dynamic>)).toList(),
+        categories: ((data['categories'] as List?) ?? []).map((e) => e.toString()).toList(),
+        topSellers: ((data['topSellers'] as List?) ?? []).map((e) => TopSellerInfo.fromJson(e as Map<String, dynamic>)).toList(),
+      ));
+    } catch (e) {
+      return FailureResult(UnknownFailure(message: 'Lỗi xử lý dữ liệu home: $e'));
+    }
+  }
+
+  /// Helper: GET /listings với sort param — parse response chung
+  Future<Result<List<Listing>>> _getListingsBySort(String sort, {int limit = 10}) async {
+    final res = await _api.get('/listings', query: {'sort': sort, 'limit': limit.toString()});
+    return switch (res) {
+      ResultSuccess(data: final d) => ResultSuccess<List<Listing>>(
+          ((d['listings'] as List?) ?? []).map((e) => _fromJson(e as Map<String, dynamic>)).toList(),
+        ),
+      FailureResult(failure: final f) => FailureResult<List<Listing>>(f),
+    };
+  }
+
+  /// Featured listings — boosted + nhiều views nhất
+  Future<Result<List<Listing>>> getFeaturedListings({int limit = 10}) =>
+      _getListingsBySort('boosted', limit: limit);
+
+  /// Newest listings — mới đăng nhất
+  Future<Result<List<Listing>>> getNewestListings({int limit = 10}) =>
+      _getListingsBySort('newest', limit: limit);
+
+  /// Popular listings — nhiều saves + views nhất
+  Future<Result<List<Listing>>> getPopularListings({int limit = 10}) =>
+      _getListingsBySort('popular', limit: limit);
+
+  /// Top sellers — từ user service
+  Future<Result<List<TopSellerInfo>>> getTopSellers() async {
+    final res = await _api.get('/users/top-sellers');
+    return switch (res) {
+      ResultSuccess(data: final d) => ResultSuccess<List<TopSellerInfo>>(
+          ((d['data'] as List?) ?? []).map((e) => TopSellerInfo.fromJson(e as Map<String, dynamic>)).toList(),
+        ),
+      FailureResult(failure: final f) => FailureResult<List<TopSellerInfo>>(f),
+    };
+  }
+
+  Future<Result<List<Listing>>> getAllListings({
+    String? status,
+    String? type,
+    String? category,
+    int? page,
+    int? limit,
+  }) async {
+    final query = <String, String>{};
+    if (status != null) query['status'] = status;
+    if (type != null) query['type'] = type;
+    if (category != null) query['category'] = category;
+    if (page != null) query['page'] = page.toString();
+    if (limit != null) query['limit'] = limit.toString();
+    final res = await _api.get('/listings', query: query.isEmpty ? null : query);
+    return switch (res) {
+      ResultSuccess(data: final d) => ResultSuccess<List<Listing>>(
+          ((d['listings'] as List?) ?? []).map((e) => _fromJson(e as Map<String, dynamic>)).toList(),
+        ),
+      FailureResult(failure: final f) => FailureResult<List<Listing>>(f),
+    };
   }
 
   Future<Result<void>> deleteListing(String id) async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    return const ResultSuccess(null);
+    final res = await _api.delete('/listings/$id');
+    return switch (res) {
+      ResultSuccess() => ResultSuccess<void>(null),
+      FailureResult(failure: final f) => FailureResult<void>(f),
+    };
   }
 
   Future<Result<Listing>> boostListing(String id, int days) async {
-    await Future.delayed(const Duration(seconds: 1));
-    final listing = _mockListings.firstWhere((l) => l.id == id);
-    return ResultSuccess(listing.copyWith(boostExpiry: DateTime.now().add(Duration(days: days))));
+    final res = await _api.post('/listings/$id/boost', body: {'days': days});
+    return switch (res) {
+      ResultSuccess(data: final d) => ResultSuccess<Listing>(_fromJson(d['data'] as Map<String, dynamic>)),
+      FailureResult(failure: final f) => FailureResult<Listing>(f),
+    };
   }
 
-  List<Listing> getDrafts() {
-    return _mockListings.where((l) => l.status == ListingStatus.draft).toList();
-  }
+  Future<Result<List<Listing>>> getDrafts() async => getMyListings(filter: ListingStatus.draft);
 }
+
+ItemCondition _parseCondition(String? s) => switch (s) {
+      'new' => ItemCondition.new_,
+      'likeNew' => ItemCondition.likeNew,
+      _ => ItemCondition.used,
+    };
+
+ListingType _parseType(String? s) => switch (s) {
+      'trade' => ListingType.trade,
+      'both' => ListingType.both,
+      _ => ListingType.sale,
+    };
+
+ListingStatus _parseStatus(String? s) => switch (s) {
+      'sold' => ListingStatus.sold,
+      'hidden' => ListingStatus.hidden,
+      'draft' => ListingStatus.draft,
+      _ => ListingStatus.active,
+    };

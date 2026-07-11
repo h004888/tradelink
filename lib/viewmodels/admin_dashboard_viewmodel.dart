@@ -1,24 +1,54 @@
 import 'package:flutter/material.dart';
+import '../../core/result.dart';
+import '../../core/ui_state.dart';
+import '../../repositories/admin_repository.dart';
 
 class AdminDashboardViewModel extends ChangeNotifier {
-  int _pendingDisputes = 5;
-  int get pendingDisputes => _pendingDisputes;
-  int _resolvedToday = 3;
-  int get resolvedToday => _resolvedToday;
-  int _pendingReviews = 12;
-  int get pendingReviews => _pendingReviews;
+  final AdminRepository _repository = AdminRepository();
 
-  // Mock disputes
-  final List<_DisputeItem> disputes = const [
-    _DisputeItem(id: 'TC-042', type: 'BÁN', complainant: 'Minh Hoàng', respondent: 'Thu Trang', reason: 'Hàng sai mô tả', time: '2 giờ trước', priority: true),
-    _DisputeItem(id: 'TC-043', type: 'TRAO ĐỔI', complainant: 'Anh Quân', respondent: 'Hương Ly', reason: 'Không gửi đồ', time: '5 giờ trước', priority: false),
-  ];
+  UiState<AdminDashboardData> _state = const Loading();
+  UiState<AdminDashboardData> get state => _state;
 
-  // Mock pending listings
-  final List<_PendingListing> pendingListings = const [
-    _PendingListing(title: 'iPhone 15 Pro Max', seller: 'Trọng Nghĩa', flags: 4),
-  ];
+  AdminDashboardData get data {
+    final s = _state;
+    return s is Success<AdminDashboardData> ? s.data : _empty;
+  }
+
+  int get pendingDisputes => data.pendingDisputes;
+  List<Dispute> get disputes => data.recentDisputes;
+
+  AdminDashboardData _empty = AdminDashboardData(
+    totalUsers: 0,
+    totalListings: 0,
+    activeListings: 0,
+    totalTransactions: 0,
+    pendingDisputes: 0,
+    resolvedToday: 0,
+    totalRevenue: 0,
+    recentDisputes: const [],
+    flaggedListings: const [],
+  );
+
+  AdminDashboardViewModel() { load(); }
+
+  Future<void> load() async {
+    _state = const Loading();
+    notifyListeners();
+    final res = await _repository.getDashboard();
+    switch (res) {
+      case ResultSuccess<AdminDashboardData>(:final data):
+        _state = Success(data);
+      case FailureResult<AdminDashboardData>(:final failure):
+        _state = Error(message: failure.message, retryable: true);
+    }
+    notifyListeners();
+  }
+
+  Future<void> resolveDispute(String disputeId, String resolution) async {
+    final res = await _repository.resolveDispute(disputeId, resolution);
+    if (res is ResultSuccess<Map<String, dynamic>>) {
+      // Refresh sau khi resolve thành công
+      await load();
+    }
+  }
 }
-
-class _DisputeItem { final String id, type, complainant, respondent, reason, time; final bool priority; const _DisputeItem({required this.id, required this.type, required this.complainant, required this.respondent, required this.reason, required this.time, required this.priority}); }
-class _PendingListing { final String title, seller; final int flags; const _PendingListing({required this.title, required this.seller, required this.flags}); }

@@ -17,9 +17,12 @@ class EditListingViewModel extends ChangeNotifier {
   late Listing _listing;
   Listing get listing => _listing;
 
-  EditListingViewModel({required this.listingId}) { _load(); }
+  EditListingViewModel({required this.listingId}) { load(); }
 
-  Future<void> _load() async {
+  /// Public reload method — cho phép View gọi retry khi loadState là Error.
+  Future<void> load() async {
+    _loadState = const Loading();
+    notifyListeners();
     final result = await _repository.getListingById(listingId);
     switch (result) {
       case ResultSuccess(data: final l): _listing = l; _loadState = Success(l);

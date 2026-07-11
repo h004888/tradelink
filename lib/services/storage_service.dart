@@ -1,0 +1,54 @@
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+/// Service quản lý persistent storage cho auth tokens và onboarding state.
+/// Dùng FlutterSecureStorage (mã hóa) thay vì SharedPreferences (plaintext).
+class StorageService {
+  StorageService._();
+  static final StorageService instance = StorageService._();
+
+  final _storage = const FlutterSecureStorage();
+
+  // ── Keys ──
+  static const _keyToken = 'auth_token';
+  static const _keyRefreshToken = 'auth_refresh_token';
+  static const _keyOnboardingDone = 'onboarding_done';
+  static const _keyUserId = 'user_id';
+
+  // ── Auth tokens ──
+  Future<void> saveToken(String token) =>
+      _storage.write(key: _keyToken, value: token);
+
+  Future<String?> getToken() =>
+      _storage.read(key: _keyToken);
+
+  Future<void> saveRefreshToken(String token) =>
+      _storage.write(key: _keyRefreshToken, value: token);
+
+  Future<String?> getRefreshToken() =>
+      _storage.read(key: _keyRefreshToken);
+
+  Future<void> clearTokens() async {
+    await _storage.delete(key: _keyToken);
+    await _storage.delete(key: _keyRefreshToken);
+    await _storage.delete(key: _keyUserId);
+  }
+
+  // ── User ID ──
+  Future<void> saveUserId(String id) =>
+      _storage.write(key: _keyUserId, value: id);
+
+  Future<String?> getUserId() =>
+      _storage.read(key: _keyUserId);
+
+  Future<void> clearUserId() =>
+      _storage.delete(key: _keyUserId);
+
+  // ── Onboarding state ──
+  Future<void> setOnboardingDone() =>
+      _storage.write(key: _keyOnboardingDone, value: 'true');
+
+  Future<bool> isOnboardingDone() async {
+    final v = await _storage.read(key: _keyOnboardingDone);
+    return v == 'true';
+  }
+}
