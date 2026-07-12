@@ -42,7 +42,8 @@ class EmptyState extends StatelessWidget {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(TradeLinkSpacing.xl),
-        child: Column(
+        child: SingleChildScrollView(
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -103,7 +104,8 @@ class EmptyState extends StatelessWidget {
                 child: Text(secondaryLabel!),
               ),
             ],
-          ],
+            ],
+          ),
         ),
       ),
     );

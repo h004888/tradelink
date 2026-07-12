@@ -7,6 +7,7 @@ import '../../core/ui_state.dart';
 import '../../utils/theme.dart';
 import '../../viewmodels/edit_profile_viewmodel.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/map_picker_screen.dart';
 import '../../widgets/tradelink_app_bar.dart';
 import '../../widgets/tradelink_button.dart';
 import '../../widgets/tradelink_card.dart';
@@ -187,14 +188,49 @@ class _EditProfileBody extends StatelessWidget {
             onChanged: vm.onNameChanged,
           ),
           const SizedBox(height: TradeLinkSpacing.md),
-          TextField(
-            controller: TextEditingController(text: vm.address),
-            style: theme.textTheme.bodyLarge,
-            decoration: const InputDecoration(
-              labelText: 'Địa chỉ',
-              prefixIcon: Icon(Icons.location_on_outlined),
-            ),
-            onChanged: vm.onAddressChanged,
+          // Địa chỉ với nút chọn bản đồ
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: TextEditingController(text: vm.address),
+                  style: theme.textTheme.bodyLarge,
+                  decoration: const InputDecoration(
+                    labelText: 'Địa chỉ',
+                    prefixIcon: Icon(Icons.location_on_outlined),
+                  ),
+                  onChanged: vm.onAddressChanged,
+                ),
+              ),
+              const SizedBox(width: TradeLinkSpacing.xs),
+              SizedBox(
+                width: 48,
+                height: 48,
+                child: IconButton(
+                  icon: const Icon(Icons.map_outlined, color: Colors.white),
+                  style: IconButton.styleFrom(
+                    backgroundColor: TradeLinkColors.primaryContainer,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(TradeLinkRadii.md),
+                    ),
+                  ),
+                  onPressed: () async {
+                    final result = await Navigator.of(context).push<LocationResult>(
+                      MaterialPageRoute(
+                        builder: (_) => MapPickerScreen(
+                          initialLatitude: vm.latitude,
+                          initialLongitude: vm.longitude,
+                          initialAddress: vm.address,
+                        ),
+                      ),
+                    );
+                    if (result != null) {
+                      vm.setLocation(result.latitude, result.longitude, result.address);
+                    }
+                  },
+                ),
+              ),
+            ],
           ),
           if (vm.avatarState is Error) ...[
             const SizedBox(height: TradeLinkSpacing.xs),

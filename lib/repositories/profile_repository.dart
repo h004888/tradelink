@@ -18,6 +18,8 @@ class ProfileRepository {
         phone: j['phone'] as String? ?? '',
         avatarUrl: j['avatarUrl'] as String?,
         address: j['address'] as String?,
+        latitude: (j['latitude'] as num?)?.toDouble(),
+        longitude: (j['longitude'] as num?)?.toDouble(),
         reputationScore: (j['reputationScore'] as num?)?.toInt() ?? 0,
         totalTransactions: (j['totalTransactions'] as num?)?.toInt() ?? 0,
         successRate: (j['successRate'] as num?)?.toDouble() ?? 100,
@@ -45,12 +47,15 @@ class ProfileRepository {
   }
 
   Future<Result<Profile>> updateProfile(Profile updated) async {
-    final res = await _api.patch('/users/${updated.id}', body: {
+    final body = <String, dynamic>{
       'name': updated.name,
       'phone': updated.phone,
       'address': updated.address,
       'avatarUrl': updated.avatarUrl,
-    });
+    };
+    if (updated.latitude != null) body['latitude'] = updated.latitude;
+    if (updated.longitude != null) body['longitude'] = updated.longitude;
+    final res = await _api.patch('/users/${updated.id}', body: body);
     return switch (res) {
       ResultSuccess(data: final d) => ResultSuccess<Profile>(_fromJson(d['data'] as Map<String, dynamic>)),
       FailureResult(failure: final f) => FailureResult<Profile>(f),
@@ -94,7 +99,7 @@ class ProfileRepository {
   Map<String, dynamic> _decode(String body) {
     try {
       if (body.isEmpty) return const {};
-      return jsonDecode(utf8.decode(body.codeUnits)) as Map<String, dynamic>;
+      return jsonDecode(body) as Map<String, dynamic>;
     } catch (_) {
       return {'message': body};
     }

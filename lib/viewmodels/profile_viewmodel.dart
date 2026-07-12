@@ -37,12 +37,12 @@ class ProfileViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void navigateToEditProfile(BuildContext context) {
-    context.push(AppPaths.editProfile);
+  Future<void> navigateToEditProfile(BuildContext context) async {
+    await context.push(AppPaths.editProfile);
   }
 
-  void navigateToMyListings(BuildContext context) {
-    context.push(AppPaths.myListings);
+  Future<void> navigateToMyListings(BuildContext context) async {
+    await context.push(AppPaths.myListings);
   }
 
   void navigateToWatchlist(BuildContext context) {

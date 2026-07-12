@@ -84,10 +84,24 @@ class _ProfileBody extends StatelessWidget {
               ),
             ),
             alignment: Alignment.center,
-            child: const Icon(
-              Icons.person_outline,
-              size: 48,
-              color: TradeLinkColors.onSurfaceVariant,
+            child: ClipOval(
+              child: profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty
+                  ? Image.network(
+                      profile.avatarUrl!,
+                      width: 96,
+                      height: 96,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const Icon(
+                        Icons.person_outline,
+                        size: 48,
+                        color: TradeLinkColors.onSurfaceVariant,
+                      ),
+                    )
+                  : const Icon(
+                      Icons.person_outline,
+                      size: 48,
+                      color: TradeLinkColors.onSurfaceVariant,
+                    ),
             ),
           ),
           const SizedBox(height: TradeLinkSpacing.md),
@@ -98,13 +112,75 @@ class _ProfileBody extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
           ),
-          if (profile.address?.isNotEmpty == true) ...[
-            const SizedBox(height: TradeLinkSpacing.xs),
-            Text(
-              profile.address!,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: TradeLinkColors.onSurfaceVariant,
+          // Location card — address + coordinates
+          if (profile.address?.isNotEmpty == true ||
+              (profile.latitude != null && profile.longitude != null)) ...[
+            const SizedBox(height: TradeLinkSpacing.md),
+            TradeLinkCard(
+              padding: const EdgeInsets.all(TradeLinkSpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (profile.address?.isNotEmpty == true) ...[
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.location_on_outlined,
+                            size: 18, color: TradeLinkColors.onSurfaceVariant),
+                        const SizedBox(width: TradeLinkSpacing.xs),
+                        Expanded(
+                          child: Text(
+                            profile.address!,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: TradeLinkColors.onSurface,
+                                  height: 1.4,
+                                ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  if (profile.latitude != null && profile.longitude != null) ...[
+                    if (profile.address?.isNotEmpty == true)
+                      const SizedBox(height: TradeLinkSpacing.xs),
+                    Row(
+                      children: [
+                        const Icon(Icons.map_outlined,
+                            size: 16, color: TradeLinkColors.onSurfaceVariant),
+                        const SizedBox(width: TradeLinkSpacing.xs),
+                        Text(
+                          '${profile.latitude!.toStringAsFixed(4)}°N, ${profile.longitude!.toStringAsFixed(4)}°E',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: TradeLinkColors.onSurfaceVariant,
+                                fontFeatures: const [FontFeature.tabularFigures()],
+                              ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ] else ...[
+            // Khi chưa có địa chỉ — hint nhẹ
+            const SizedBox(height: TradeLinkSpacing.sm),
+            GestureDetector(
+              onTap: () => vm.navigateToEditProfile(context),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.location_on_outlined,
+                      size: 16, color: TradeLinkColors.actionBlue),
+                  const SizedBox(width: TradeLinkSpacing.xs),
+                  Text(
+                    'Thêm địa chỉ',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: TradeLinkColors.actionBlue,
+                          fontWeight: FontWeight.w600,
+                        ),
                   ),
+                ],
+              ),
             ),
           ],
           const SizedBox(height: TradeLinkSpacing.md),
@@ -178,14 +254,20 @@ class _ProfileBody extends StatelessWidget {
                   context,
                   Icons.list_alt_outlined,
                   'Tin đăng của tôi',
-                  onTap: () => vm.navigateToMyListings(context),
+                  onTap: () async {
+                    await vm.navigateToMyListings(context);
+                    vm.loadProfile();
+                  },
                 ),
                 const Divider(height: 1, indent: 56, color: TradeLinkColors.cardDivider),
                 _menuItem(
                   context,
                   Icons.edit_outlined,
                   'Chỉnh sửa hồ sơ',
-                  onTap: () => vm.navigateToEditProfile(context),
+                  onTap: () async {
+                    await vm.navigateToEditProfile(context);
+                    vm.loadProfile();
+                  },
                 ),
                 const Divider(height: 1, indent: 56, color: TradeLinkColors.cardDivider),
                 _menuItem(

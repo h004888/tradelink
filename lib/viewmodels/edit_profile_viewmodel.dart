@@ -22,6 +22,10 @@ class EditProfileViewModel extends ChangeNotifier {
   String get name => _name;
   String _address = '';
   String get address => _address;
+  double? _latitude;
+  double? get latitude => _latitude;
+  double? _longitude;
+  double? get longitude => _longitude;
   String? _avatarUrl;
   String? get avatarUrl => _avatarUrl;
 
@@ -39,6 +43,8 @@ class EditProfileViewModel extends ChangeNotifier {
       final p = result.data;
       _name = p.name;
       _address = p.address ?? '';
+      _latitude = p.latitude;
+      _longitude = p.longitude;
       _avatarUrl = p.avatarUrl;
       _loadState = Success(p);
     } else if (result is FailureResult<Profile>) {
@@ -49,6 +55,13 @@ class EditProfileViewModel extends ChangeNotifier {
 
   void onNameChanged(String v) => _name = v;
   void onAddressChanged(String v) => _address = v;
+
+  void setLocation(double lat, double lng, String address) {
+    _latitude = lat;
+    _longitude = lng;
+    _address = address;
+    notifyListeners();
+  }
 
   /// Upload ảnh mới làm avatar — dùng backend PUT /users/:id/avatar.
   Future<bool> pickAndUploadAvatar({ImageSource source = ImageSource.gallery}) async {
@@ -88,7 +101,13 @@ class EditProfileViewModel extends ChangeNotifier {
       return false;
     }
     final profile = s.data;
-    final updated = profile.copyWith(name: _name, address: _address, avatarUrl: _avatarUrl);
+    final updated = profile.copyWith(
+      name: _name,
+      address: _address,
+      latitude: _latitude,
+      longitude: _longitude,
+      avatarUrl: _avatarUrl,
+    );
 
     final result = await _repository.updateProfile(updated);
     if (result is ResultSuccess<Profile>) {

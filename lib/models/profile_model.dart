@@ -4,6 +4,8 @@ class Profile {
   final String phone;
   final String? avatarUrl;
   final String? address;
+  final double? latitude;
+  final double? longitude;
   final int reputationScore;
   final int totalTransactions;
   final double successRate;
@@ -16,6 +18,8 @@ class Profile {
     required this.phone,
     this.avatarUrl,
     this.address,
+    this.latitude,
+    this.longitude,
     this.reputationScore = 0,
     this.totalTransactions = 0,
     this.successRate = 100,
@@ -28,6 +32,8 @@ class Profile {
     String? phone,
     String? avatarUrl,
     String? address,
+    double? latitude,
+    double? longitude,
     int? reputationScore,
     int? totalTransactions,
     double? successRate,
@@ -39,6 +45,8 @@ class Profile {
       phone: phone ?? this.phone,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       address: address ?? this.address,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
       reputationScore: reputationScore ?? this.reputationScore,
       totalTransactions: totalTransactions ?? this.totalTransactions,
       successRate: successRate ?? this.successRate,

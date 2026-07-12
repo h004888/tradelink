@@ -258,22 +258,20 @@ class AppRouter {
               GoRoute(
                 path: AppPaths.profile,
                 builder: (_, state) => const ProfileView(),
-                routes: [
-                  GoRoute(path: AppPaths.editProfile, builder: (_, state) => const EditProfileView()),
-                  GoRoute(path: AppPaths.changePassword, builder: (_, state) => const ChangePasswordView()),
-                  GoRoute(path: AppPaths.settings, builder: (_, state) => const SettingsView()),
-                  GoRoute(path: AppPaths.myListings, builder: (_, state) => const MyListingsView()),
-                  GoRoute(path: '${AppPaths.editListing}/:id', builder: (_, state) =>
-                    EditListingView(listingId: state.pathParameters['id']!)),
-                  GoRoute(path: '${AppPaths.boostListing}/:id', builder: (_, state) =>
-                    BoostListingView(listingId: state.pathParameters['id']!)),
-                  GoRoute(path: AppPaths.draftListings, builder: (_, state) => const DraftListingsView()),
-                  GoRoute(path: AppPaths.notifications, builder: (_, state) => const NotificationsView()),
-                  GoRoute(path: AppPaths.admin, builder: (_, state) => const AdminDashboardView()),
-                  GoRoute(path: AppPaths.adminUsers, builder: (_, state) => const AdminUsersView()),
-                  GoRoute(path: AppPaths.adminTransactions, builder: (_, state) => const AdminTransactionsView()),
-                ],
               ),
+              GoRoute(path: AppPaths.editProfile, builder: (_, state) => const EditProfileView()),
+              GoRoute(path: AppPaths.changePassword, builder: (_, state) => const ChangePasswordView()),
+              GoRoute(path: AppPaths.settings, builder: (_, state) => const SettingsView()),
+              GoRoute(path: AppPaths.myListings, builder: (_, state) => const MyListingsView()),
+              GoRoute(path: '${AppPaths.editListing}/:id', builder: (_, state) =>
+                EditListingView(listingId: state.pathParameters['id']!)),
+              GoRoute(path: '${AppPaths.boostListing}/:id', builder: (_, state) =>
+                BoostListingView(listingId: state.pathParameters['id']!)),
+              GoRoute(path: AppPaths.draftListings, builder: (_, state) => const DraftListingsView()),
+              GoRoute(path: AppPaths.notifications, builder: (_, state) => const NotificationsView()),
+              GoRoute(path: AppPaths.admin, builder: (_, state) => const AdminDashboardView()),
+              GoRoute(path: AppPaths.adminUsers, builder: (_, state) => const AdminUsersView()),
+              GoRoute(path: AppPaths.adminTransactions, builder: (_, state) => const AdminTransactionsView()),
             ],
           ),
         ],

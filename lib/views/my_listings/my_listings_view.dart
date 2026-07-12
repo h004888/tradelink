@@ -98,13 +98,15 @@ class _Body extends StatelessWidget {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push(AppPaths.createListing),
-        backgroundColor: TradeLinkColors.primaryContainer,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add),
-        label: const Text('Đăng tin mới'),
-      ),
+      floatingActionButton: vm.state is Success && (vm.state as Success<List<Listing>>).data.isNotEmpty
+          ? FloatingActionButton.extended(
+              onPressed: () => context.push(AppPaths.createListing),
+              backgroundColor: TradeLinkColors.primaryContainer,
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.add),
+              label: const Text('Đăng tin mới'),
+            )
+          : null,
     );
   }
 }
