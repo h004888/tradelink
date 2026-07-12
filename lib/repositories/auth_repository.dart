@@ -49,6 +49,11 @@ class AuthRepository {
     return _setTokenFromResult(res);
   }
 
+  Future<Result<bool>> loginWithGoogle(String idToken) async {
+    final res = await _api.post('/auth/google', body: {'idToken': idToken});
+    return _setTokenFromResult(res);
+  }
+
   Future<Result<bool>> _setTokenFromResult(
     Result<Map<String, dynamic>> res,
   ) async {
