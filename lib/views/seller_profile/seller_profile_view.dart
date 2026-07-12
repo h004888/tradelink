@@ -176,8 +176,38 @@ class _Body extends StatelessWidget {
             ...profile.listings.map((listing) => Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: TradeLinkColors.primaryContainer.withValues(alpha: 0.1),
+                leading: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: SizedBox(
+                    width: 56,
+                    height: 56,
+                    child: listing.imageUrl != null
+                        ? Image.network(
+                            listing.imageUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              color: TradeLinkColors.surfaceContainerHigh,
+                              alignment: Alignment.center,
+                              child: const Icon(Icons.image_outlined,
+                                  color: TradeLinkColors.outlineVariant, size: 28),
+                            ),
+                            loadingBuilder: (_, child, progress) =>
+                                progress == null ? child : Container(
+                              color: TradeLinkColors.surfaceContainerHigh,
+                              alignment: Alignment.center,
+                              child: const SizedBox(
+                                width: 20, height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            ),
+                          )
+                        : Container(
+                            color: TradeLinkColors.surfaceContainerHigh,
+                            alignment: Alignment.center,
+                            child: const Icon(Icons.image_outlined,
+                                color: TradeLinkColors.outlineVariant, size: 28),
+                          ),
+                  ),
                 ),
                 title: Text(listing.title, maxLines: 1, overflow: TextOverflow.ellipsis),
                 trailing: Text(listing.priceFormatted, style: TextStyle(fontWeight: FontWeight.w600)),

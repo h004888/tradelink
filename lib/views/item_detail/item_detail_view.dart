@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 
 import '../../core/ui_state.dart';
 import '../../models/listing_model.dart';
+import '../../models/seller_stats.dart';
 import '../../utils/constants.dart';
+import '../../utils/format.dart';
 import '../../utils/theme.dart';
 import '../../viewmodels/item_detail_viewmodel.dart';
 import '../../widgets/empty_state.dart';
@@ -36,6 +38,13 @@ class _Body extends StatefulWidget {
 }
 
 class _BodyState extends State<_Body> {
+  int _currentImageIndex = 0;
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<ItemDetailViewModel>();
@@ -106,7 +115,7 @@ class _BodyState extends State<_Body> {
           const SizedBox(height: TradeLinkSpacing.md),
 
           // ── 4. Seller Trust Card ──
-          _buildSellerTrustCard(context, item, theme),
+          _buildSellerTrustCard(context, item, theme, vm.sellerStats),
           const SizedBox(height: TradeLinkSpacing.md),
 
           // ── 5. Protection Card ──
@@ -127,37 +136,76 @@ class _BodyState extends State<_Body> {
 
   // ── 1. Media ──
   Widget _buildMedia(Listing item, ThemeData theme) {
-    return Container(
+    final images = item.imageUrls;
+    final hasImages = images.isNotEmpty;
+    final canSwipe = images.length > 1;
+
+    // Không có ảnh → hiện placeholder
+    if (!hasImages) {
+      return Container(
+        height: 280,
+        decoration: BoxDecoration(
+          color: TradeLinkColors.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(TradeLinkRadii.xl),
+        ),
+        alignment: Alignment.center,
+        child: const Icon(Icons.image_outlined, size: 80, color: TradeLinkColors.outlineVariant),
+      );
+    }
+
+    // Có ảnh → hiện carousel
+    return SizedBox(
       height: 280,
-      decoration: BoxDecoration(
-        color: TradeLinkColors.surfaceContainerHigh,
+      child: ClipRRect(
         borderRadius: BorderRadius.circular(TradeLinkRadii.xl),
-      ),
-      alignment: Alignment.center,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          const Center(
-            child: Icon(Icons.image_outlined, size: 80, color: TradeLinkColors.outlineVariant),
-          ),
-          if (item.imageUrls.isNotEmpty)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(TradeLinkRadii.xl),
-              child: Image.network(item.imageUrls.first, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox()),
-            ),
-          // Image count badge
-          if (item.imageUrls.length > 1)
-            Positioned(
-              right: 12, bottom: 12,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.black54, borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text('+${item.imageUrls.length}', style: const TextStyle(color: Colors.white, fontSize: 12)),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // PageView (swipeable)
+            PageView.builder(
+              itemCount: images.length,
+              onPageChanged: (i) => setState(() => _currentImageIndex = i),
+              itemBuilder: (_, i) => Image.network(
+                images[i],
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const SizedBox(),
               ),
             ),
-        ],
+            // Page indicator dots
+            if (canSwipe)
+              Positioned(
+                left: 0, right: 0, bottom: 12,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(images.length, (i) => Container(
+                    width: 6, height: 6,
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _currentImageIndex == i
+                          ? Colors.white
+                          : Colors.white.withValues(alpha: 0.4),
+                    ),
+                  )),
+                ),
+              ),
+            // Image count badge
+            if (canSwipe)
+              Positioned(
+                right: 12, top: 12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.black54, borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${_currentImageIndex + 1}/${images.length}',
+                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -180,25 +228,45 @@ class _BodyState extends State<_Body> {
             children: [
               TradeLinkText.money(item.priceFormatted, size: 'large'),
               const SizedBox(width: 8),
-              StatusBadge(
-                type: item.type == ListingType.trade
-                    ? TradeLinkBadgeType.trade : TradeLinkBadgeType.escrow,
-                label: item.type == ListingType.trade ? 'Trao đổi' : 'Bán qua escrow',
-                prominent: true,
+              Flexible(
+                child: StatusBadge(
+                  type: item.type == ListingType.trade
+                      ? TradeLinkBadgeType.trade : TradeLinkBadgeType.escrow,
+                  label: item.type == ListingType.trade ? 'Trao đổi' : 'Bán qua escrow',
+                  prominent: true,
+                ),
               ),
             ],
           ),
         ],
         const SizedBox(height: TradeLinkSpacing.sm),
+        // Location + Time
         Row(
           children: [
             Icon(Icons.location_on_outlined, size: 14, color: TradeLinkColors.onSurfaceVariant),
             const SizedBox(width: 4),
-            Text('Q.1, TP.HCM', style: TextStyle(fontSize: 13, color: TradeLinkColors.onSurfaceVariant)),
+            Text(item.location ?? 'Chưa cập nhật',
+              style: TextStyle(fontSize: 13, color: TradeLinkColors.onSurfaceVariant)),
             const SizedBox(width: 16),
             Icon(Icons.access_time_outlined, size: 14, color: TradeLinkColors.onSurfaceVariant),
             const SizedBox(width: 4),
-            Text(_formatTimeAgo(item.createdAt), style: TextStyle(fontSize: 13, color: TradeLinkColors.onSurfaceVariant)),
+            Text(_formatTimeAgo(item.createdAt),
+              style: TextStyle(fontSize: 13, color: TradeLinkColors.onSurfaceVariant)),
+          ],
+        ),
+        const SizedBox(height: TradeLinkSpacing.xs),
+        // Views + Interests
+        Row(
+          children: [
+            Icon(Icons.visibility_outlined, size: 14, color: TradeLinkColors.onSurfaceVariant),
+            const SizedBox(width: 4),
+            Text('${item.views} lượt xem',
+              style: TextStyle(fontSize: 13, color: TradeLinkColors.onSurfaceVariant)),
+            const SizedBox(width: 16),
+            Icon(Icons.favorite_outline, size: 14, color: TradeLinkColors.onSurfaceVariant),
+            const SizedBox(width: 4),
+            Text('${item.interests} quan tâm',
+              style: TextStyle(fontSize: 13, color: TradeLinkColors.onSurfaceVariant)),
           ],
         ),
       ],
@@ -218,11 +286,12 @@ class _BodyState extends State<_Body> {
           const SizedBox(height: TradeLinkSpacing.xs),
           Text(item.description, style: theme.textTheme.bodyMedium?.copyWith(height: 1.6)),
           const SizedBox(height: TradeLinkSpacing.sm),
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
             children: [
               _InfoChip(label: 'Tình trạng: ${item.condition.name}'),
-              const SizedBox(width: 8),
-              _InfoChip(label: 'Danh mục: ${item.category}'),
+              _InfoChip(label: 'Danh mục: ${item.categoryName ?? item.category}'),
             ],
           ),
         ],
@@ -231,7 +300,7 @@ class _BodyState extends State<_Body> {
   }
 
   // ── 4. Seller Trust Card ──
-  Widget _buildSellerTrustCard(BuildContext context, Listing item, ThemeData theme) {
+  Widget _buildSellerTrustCard(BuildContext context, Listing item, ThemeData theme, SellerStats? stats) {
     return TradeLinkCard(
       padding: const EdgeInsets.all(TradeLinkSpacing.md),
       onTap: () => context.push('${AppPaths.sellerProfile}/${item.sellerId}'),
@@ -253,7 +322,8 @@ class _BodyState extends State<_Body> {
               children: [
                 Row(
                   children: [
-                    Text(item.sellerName, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
+                    Text(stats?.sellerName ?? item.sellerName,
+                      style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
                     const SizedBox(width: 4),
                     Icon(Icons.verified, size: 16, color: TradeLinkColors.tradeTeal),
                     const SizedBox(width: 4),
@@ -261,18 +331,32 @@ class _BodyState extends State<_Body> {
                   ],
                 ),
                 const SizedBox(height: 2),
-                Text('$item.category • ${item.condition.name}',
+                Text('${item.categoryName ?? item.category} • ${item.condition.name}',
                     style: theme.textTheme.bodySmall?.copyWith(color: TradeLinkColors.onSurfaceVariant)),
-                Row(
-                  children: [
-                    Icon(Icons.star_rounded, size: 14, color: TradeLinkColors.escrowAmber),
-                    Text(' 4.8', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                    Text(' (128 giao dịch)', style: TextStyle(fontSize: 11, color: TradeLinkColors.onSurfaceVariant)),
-                    const SizedBox(width: 8),
-                    Icon(Icons.timer_outlined, size: 12, color: TradeLinkColors.onSurfaceVariant),
-                    Text(' Phản hồi ~1h', style: TextStyle(fontSize: 11, color: TradeLinkColors.onSurfaceVariant)),
-                  ],
-                ),
+                // Stats from API
+                if (stats != null)
+                  Row(
+                    children: [
+                      Icon(Icons.star_rounded, size: 14, color: TradeLinkColors.escrowAmber),
+                      Text(' ${stats.ratingFormatted}',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                      Text(' (${stats.totalTransactions} giao dịch)',
+                        style: TextStyle(fontSize: 11, color: TradeLinkColors.onSurfaceVariant)),
+                      const SizedBox(width: 8),
+                      Icon(Icons.timer_outlined, size: 12, color: TradeLinkColors.onSurfaceVariant),
+                      Text(' ${stats.responseTime}',
+                        style: TextStyle(fontSize: 11, color: TradeLinkColors.onSurfaceVariant)),
+                    ],
+                  )
+                else
+                  // Loading skeleton
+                  Row(
+                    children: [
+                      Container(width: 120, height: 14,
+                        decoration: BoxDecoration(color: TradeLinkColors.surfaceContainerHigh,
+                          borderRadius: BorderRadius.circular(4))),
+                    ],
+                  ),
               ],
             ),
           ),
@@ -359,7 +443,7 @@ class _BodyState extends State<_Body> {
         children: [
           Text(label, style: TextStyle(fontSize: 13, fontWeight: bold ? FontWeight.w600 : FontWeight.normal)),
           Text(
-            '${amount.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')} đ',
+            formatVnd(amount),
             style: TextStyle(fontSize: 13, fontWeight: bold ? FontWeight.w700 : FontWeight.w500),
           ),
         ],
@@ -420,7 +504,7 @@ class _BodyState extends State<_Body> {
           children: [
             Expanded(
               child: TradeLinkButton.secondary(
-                label: 'Trả giá',
+                label: 'Gửi offer',
                 icon: Icons.send_outlined,
                 onPressed: () => context.push('${AppPaths.sendOffer}/${item.id}'),
               ),

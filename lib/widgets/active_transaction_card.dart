@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/transaction_model.dart';
+import '../utils/format.dart';
 import '../utils/theme.dart';
 
 /// Card hiển thị giao dịch escrow đang active trên Home page.
@@ -102,7 +103,7 @@ class ActiveTransactionCard extends StatelessWidget {
                   if (tx.amount != null) ...[
                     const SizedBox(width: 8),
                     Text(
-                      '${tx.amount!.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')} ₫',
+                      formatVnd(tx.amount),
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,

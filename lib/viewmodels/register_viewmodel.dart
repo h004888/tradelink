@@ -13,19 +13,28 @@ class RegisterViewModel extends ChangeNotifier {
   String _name = '';
   String _email = '';
   String _password = '';
+  String _phone = '';
+  String _address = '';
   bool _obscurePassword = true;
   bool _isTermsAccepted = false;
 
   String get name => _name;
   String get email => _email;
   String get password => _password;
+  String get phone => _phone;
+  String get address => _address;
   bool get obscurePassword => _obscurePassword;
   bool get isTermsAccepted => _isTermsAccepted;
 
   void onNameChanged(String value) => _name = value;
   void onEmailChanged(String value) => _email = value;
   void onPasswordChanged(String value) => _password = value;
-  void toggleObscure() => _obscurePassword = !_obscurePassword;
+  void onPhoneChanged(String value) => _phone = value;
+  void onAddressChanged(String value) => _address = value;
+  void toggleObscure() {
+    _obscurePassword = !_obscurePassword;
+    notifyListeners();
+  }
   void toggleTerms() {
     _isTermsAccepted = !_isTermsAccepted;
     notifyListeners();
@@ -49,6 +58,12 @@ class RegisterViewModel extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+    // Phone validation
+    if (!RegExp(r'^(0[3|5|7|8|9])+([0-9]{8})$').hasMatch(_phone.trim())) {
+      _state = Error(message: 'Số điện thoại không hợp lệ', retryable: false);
+      notifyListeners();
+      return false;
+    }
     if (!_isTermsAccepted) {
       _state = Error(message: 'Vui lòng đồng ý với Điều khoản dịch vụ', retryable: false);
       notifyListeners();
@@ -56,17 +71,28 @@ class RegisterViewModel extends ChangeNotifier {
     }
     _state = const Loading();
     notifyListeners();
-    final result = await _repository.register(_email.trim(), _password, trimmedName);
-    if (result is ResultSuccess<bool>) {
-      _state = const Success(null);
-      AnalyticsService.instance.track('register_success');
+    try {
+      final result = await _repository.register(
+        _email.trim(),
+        _password,
+        trimmedName,
+        phone: _phone.trim(),
+        address: _address.trim(),
+      );
+      if (result is ResultSuccess<Map<String, dynamic>>) {
+        _state = const Success(null);
+        AnalyticsService.instance.track('register_success');
+        notifyListeners();
+        return true;
+      }
+      final f = (result as FailureResult<Map<String, dynamic>>).failure;
+      _state = Error(message: f.message, retryable: true);
+      AnalyticsService.instance.track('register_failed', properties: {'reason': f.message});
       notifyListeners();
-      return true;
+    } catch (e) {
+      _state = Error(message: 'Lỗi đăng ký: $e', retryable: true);
+      notifyListeners();
     }
-    final f = (result as FailureResult<bool>).failure;
-    _state = Error(message: f.message, retryable: true);
-    AnalyticsService.instance.track('register_failed', properties: {'reason': f.message});
-    notifyListeners();
     return false;
   }
 }

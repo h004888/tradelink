@@ -21,6 +21,7 @@ class AppPaths {
   static const String resetPassword = '/auth/reset-password';
   static const String verifyEmail = '/auth/verify-email';
   static const String verifyPrompt = '/auth/verify-prompt';
+  static const String verifyOTP = '/auth/verify-otp';
   static const String settings = '/profile/settings';
 
   // TV2 — Post Management

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/offer_model.dart';
+import '../../utils/format.dart';
 import '../../utils/theme.dart';
 import '../../viewmodels/offers_list_viewmodel.dart';
 import '../../widgets/empty_state.dart';
@@ -179,7 +180,7 @@ class _Body extends StatelessWidget {
                                 ),
                               ),
                               TradeLinkText.money(
-                                '${o.price!.toStringAsFixed(0)} đ',
+                                formatVnd(o.price),
                                 size: 'compact',
                               ),
                             ],

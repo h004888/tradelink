@@ -15,6 +15,7 @@ import 'views/forgot_password/forgot_password_view.dart';
 import 'views/reset_password/reset_password_view.dart';
 import 'views/verify_email/verify_email_view.dart';
 import 'views/verify_email/verify_prompt_view.dart';
+import 'views/verify_otp/verify_otp_view.dart';
 import 'views/create_listing/create_listing_view.dart';
 import 'views/my_listings/my_listings_view.dart';
 import 'views/edit_listing/edit_listing_view.dart';
@@ -60,7 +61,6 @@ class AppRouter {
     AppPaths.verifyEmail,
     AppPaths.verifyPrompt,
     AppPaths.home,
-    AppPaths.chatList,
     AppPaths.category,
     AppPaths.search,
     AppPaths.itemDetail,
@@ -74,6 +74,7 @@ class AppRouter {
     AppPaths.editProfile,
     AppPaths.changePassword,
     AppPaths.settings,
+    AppPaths.chatList,
     AppPaths.createListing,
     AppPaths.myListings,
     AppPaths.editListing,
@@ -192,13 +193,10 @@ class AppRouter {
                 path: AppPaths.home,
                 builder: (_, state) => const HomeView(),
                 routes: [
-                  GoRoute(path: '${AppPaths.category}/:name', builder: (_, state) =>
-                    CategoryView(categoryName: Uri.decodeComponent(state.pathParameters['name']!))),
-                  GoRoute(path: AppPaths.search, builder: (_, state) => const SearchResultsView()),
+                  GoRoute(path: 'category/:categoryId', builder: (_, state) =>
+                    CategoryView(categoryId: state.pathParameters['categoryId']!)),
                   GoRoute(path: '${AppPaths.sellerProfile}/:userId', builder: (_, state) =>
                     SellerProfileView(userId: state.pathParameters['userId']!)),
-                  GoRoute(path: '${AppPaths.itemDetail}/:id', builder: (_, state) =>
-                    ItemDetailView(itemId: state.pathParameters['id']!)),
                   GoRoute(path: '${AppPaths.listingDetail}/:id', builder: (_, state) =>
                     ListingDetailView(listingId: state.pathParameters['id']!)),
                   GoRoute(path: AppPaths.watchlist, builder: (_, state) => const WatchlistView()),
@@ -282,6 +280,27 @@ class AppRouter {
       ),
 
       // ── Routes ngoài shell (full screen, không bottom nav) ──
+      GoRoute(
+        path: '${AppPaths.itemDetail}/:id',
+        builder: (_, state) => ItemDetailView(itemId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: AppPaths.search,
+        builder: (_, state) => const SearchResultsView(),
+      ),
+      // Top-level route cho Seller Profile + Watchlist (Profile tab navigate)
+      GoRoute(
+        path: '${AppPaths.sellerProfile}/:userId',
+        builder: (_, state) => SellerProfileView(userId: state.pathParameters['userId']!),
+      ),
+      GoRoute(
+        path: AppPaths.watchlist,
+        builder: (_, state) => const WatchlistView(),
+      ),
+      GoRoute(
+        path: AppPaths.notifications,
+        builder: (_, state) => const NotificationsView(),
+      ),
       GoRoute(path: AppPaths.onboarding, builder: (_, state) => const OnboardingView()),
       GoRoute(path: AppPaths.login, builder: (_, state) => const LoginView()),
       GoRoute(path: AppPaths.register, builder: (_, state) => const RegisterView()),
@@ -297,6 +316,10 @@ class AppRouter {
       GoRoute(path: AppPaths.verifyPrompt, builder: (_, state) {
         final email = state.uri.queryParameters['email'] ?? '';
         return VerifyPromptView(email: email);
+      }),
+      GoRoute(path: AppPaths.verifyOTP, builder: (_, state) {
+        final email = state.uri.queryParameters['email'] ?? '';
+        return VerifyOTPView(email: email);
       }),
       GoRoute(path: AppPaths.createListing, builder: (_, state) => const CreateListingView()),
       GoRoute(path: '/trust-and-safety', builder: (_, state) => const TrustAndSafetyView()),

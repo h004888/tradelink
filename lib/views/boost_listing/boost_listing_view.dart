@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/ui_state.dart';
+import '../../utils/format.dart';
 import '../../utils/theme.dart';
 import '../../viewmodels/boost_listing_viewmodel.dart';
 import '../../widgets/tradelink_app_bar.dart';
@@ -279,7 +280,7 @@ class _PackageCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: TradeLinkSpacing.sm),
-            TradeLinkText.money('$price đ', size: 'compact'),
+            TradeLinkText.money(formatVnd(price), size: 'compact'),
             if (selected) ...[
               const SizedBox(width: TradeLinkSpacing.xs),
               const Icon(

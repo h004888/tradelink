@@ -1,3 +1,5 @@
+import '../utils/format.dart';
+
 enum ListingType { sale, trade, both }
 
 enum ListingStatus { active, sold, hidden, draft }
@@ -11,15 +13,19 @@ class Listing {
   final double? price;
   final List<String> imageUrls;
   final String category;
+  final String? categoryName;
+  final String? categoryId;
   final ItemCondition condition;
   final ListingType type;
   final ListingStatus status;
   final String sellerId;
   final String sellerName;
+  final String? location;
   final int views;
   final int interests;
   final int saves;
   final DateTime createdAt;
+  final DateTime? updatedAt;
   final DateTime? boostExpiry;
 
   const Listing({
@@ -29,15 +35,19 @@ class Listing {
     this.price,
     this.imageUrls = const [],
     required this.category,
+    this.categoryName,
+    this.categoryId,
     this.condition = ItemCondition.used,
     this.type = ListingType.sale,
     this.status = ListingStatus.active,
     required this.sellerId,
     required this.sellerName,
+    this.location,
     this.views = 0,
     this.interests = 0,
     this.saves = 0,
     required this.createdAt,
+    this.updatedAt,
     this.boostExpiry,
   });
 
@@ -47,9 +57,11 @@ class Listing {
     double? price,
     List<String>? imageUrls,
     String? category,
+    String? categoryName,
     ItemCondition? condition,
     ListingType? type,
     ListingStatus? status,
+    String? location,
     int? views,
     int? interests,
     int? saves,
@@ -62,20 +74,24 @@ class Listing {
       price: price ?? this.price,
       imageUrls: imageUrls ?? this.imageUrls,
       category: category ?? this.category,
+      categoryName: categoryName ?? this.categoryName,
+      categoryId: categoryId ?? this.categoryId,
       condition: condition ?? this.condition,
       type: type ?? this.type,
       status: status ?? this.status,
       sellerId: sellerId,
       sellerName: sellerName,
+      location: location ?? this.location,
       views: views ?? this.views,
       interests: interests ?? this.interests,
       saves: saves ?? this.saves,
       createdAt: createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
       boostExpiry: boostExpiry ?? this.boostExpiry,
     );
   }
 
-  String get priceFormatted => price != null ? '${price!.toStringAsFixed(0)} VNĐ' : 'Trao đổi';
+  String get priceFormatted => formatVnd(price);
 
   bool get isBoosted => boostExpiry != null && boostExpiry!.isAfter(DateTime.now());
 

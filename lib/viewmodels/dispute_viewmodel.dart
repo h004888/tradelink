@@ -37,7 +37,7 @@ class DisputeViewModel extends ChangeNotifier {
         _state = Success(res.data);
       case FailureResult<Dispute>(:final failure):
         // 404 = chưa có khiếu nại — đó là state bình thường, hiển thị form tạo
-        if (failure is NotFoundFailure) {
+        if (failure is ServerFailure) {
           _existing = null;
           _state = const Success(null);
         } else {

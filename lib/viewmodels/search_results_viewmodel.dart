@@ -1,28 +1,40 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../core/result.dart';
 import '../../core/ui_state.dart';
 import '../../models/listing_model.dart';
 import '../../repositories/search_repository.dart';
-import '../../services/storage_service.dart';
 import '../../utils/constants.dart';
 
 class SearchResultsViewModel extends ChangeNotifier {
   final SearchRepository _repository = SearchRepository();
 
+  // ── Search state ──
   UiState<List<Listing>> _state = const Idle();
   UiState<List<Listing>> get state => _state;
 
   String _query = '';
   String get query => _query;
 
+  // ── Filter state ──
   ListingType? _typeFilter;
+  ListingType? get typeFilter => _typeFilter;
+
   String? _categoryFilter;
 
-  // ── Suggestions ──
+  // ── Suggestions state ──
+  SearchSuggestions? _suggestions;
+  SearchSuggestions? get suggestions => _suggestions;
+
   bool _showSuggestions = true;
   bool get showSuggestions => _showSuggestions;
 
+  Timer? _debounce;
+
+  // ── Recent searches ──
   List<String> _recentSearches = [];
   List<String> get recentSearches => _recentSearches;
 
@@ -36,35 +48,71 @@ class SearchResultsViewModel extends ChangeNotifier {
     _loadRecentSearches();
   }
 
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
+
   Future<void> _loadRecentSearches() async {
-    // Lấy recent searches từ storage (in-memory cho đơn giản)
-    // Có thể mở rộng sau với PersistentStorage
     _recentSearches = ['iPhone 15', 'Laptop Dell', 'Xe máy'];
     notifyListeners();
   }
 
+  // ── Query handling ──
   void onQueryChanged(String value) {
     _query = value;
     _showSuggestions = true;
-    notifyListeners();
+
+    _debounce?.cancel();
+    if (value.length >= 2) {
+      _debounce = Timer(const Duration(milliseconds: 300), () {
+        _searchSuggestions(value);
+      });
+    } else {
+      _suggestions = null;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _searchSuggestions(String query) async {
+    final result = await _repository.getSuggestions(query);
+    if (result is ResultSuccess<SearchSuggestions>) {
+      _suggestions = result.data;
+      notifyListeners();
+    }
   }
 
   void submitQuery(String query) {
+    if (query.isEmpty) return;
     _query = query;
     _showSuggestions = false;
+    _suggestions = null;
+    _addToRecentSearches(query);
     search(query);
   }
 
   void selectSuggestion(String suggestion) {
     _query = suggestion;
     _showSuggestions = false;
+    _suggestions = null;
+    _addToRecentSearches(suggestion);
     search(suggestion);
   }
 
   void clearSearch() {
     _query = '';
     _showSuggestions = true;
+    _suggestions = null;
     _state = const Idle();
+    notifyListeners();
+  }
+
+  // ── Recent searches ──
+  void _addToRecentSearches(String query) {
+    _recentSearches.remove(query);
+    _recentSearches.insert(0, query);
+    if (_recentSearches.length > 10) _recentSearches.removeLast();
     notifyListeners();
   }
 
@@ -73,6 +121,12 @@ class SearchResultsViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void clearAllRecentSearches() {
+    _recentSearches.clear();
+    notifyListeners();
+  }
+
+  // ── Search ──
   Future<void> search(String query) async {
     _query = query;
     _showSuggestions = false;
@@ -92,9 +146,20 @@ class SearchResultsViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setTypeFilter(ListingType? t) { _typeFilter = t; search(_query); }
-  void setCategoryFilter(String? c) { _categoryFilter = c; search(_query); }
+  // ── Filters ──
+  void setTypeFilter(ListingType? t) {
+    _typeFilter = t;
+    if (_query.isNotEmpty) search(_query);
+    notifyListeners();
+  }
 
+  void setCategoryFilter(String? c) {
+    _categoryFilter = c;
+    if (_query.isNotEmpty) search(_query);
+    notifyListeners();
+  }
+
+  // ── Navigation ──
   void goToItem(BuildContext context, String id) => context.push('${AppPaths.itemDetail}/$id');
   void goToListing(BuildContext context, String id) => context.push('${AppPaths.listingDetail}/$id');
 }

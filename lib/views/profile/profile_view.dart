@@ -1,10 +1,12 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/ui_state.dart';
 import '../../models/profile_model.dart';
+import '../../utils/constants.dart';
 import '../../utils/theme.dart';
 import '../../viewmodels/profile_viewmodel.dart';
 import '../../widgets/empty_state.dart';
@@ -188,9 +190,16 @@ class _ProfileBody extends StatelessWidget {
                 const Divider(height: 1, indent: 56, color: TradeLinkColors.cardDivider),
                 _menuItem(
                   context,
+                  Icons.bookmark_outline,
+                  'Tin đã lưu',
+                  onTap: () => vm.navigateToWatchlist(context),
+                ),
+                const Divider(height: 1, indent: 56, color: TradeLinkColors.cardDivider),
+                _menuItem(
+                  context,
                   Icons.notifications_outlined,
                   'Thông báo',
-                  onTap: () {},
+                  onTap: () => context.push(AppPaths.notifications),
                 ),
                 const Divider(height: 1, indent: 56, color: TradeLinkColors.cardDivider),
                 _menuItem(

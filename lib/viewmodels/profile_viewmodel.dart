@@ -45,6 +45,10 @@ class ProfileViewModel extends ChangeNotifier {
     context.push(AppPaths.myListings);
   }
 
+  void navigateToWatchlist(BuildContext context) {
+    context.push(AppPaths.watchlist);
+  }
+
   void navigateToSettings(BuildContext context) {
     // TODO: Settings screen
   }

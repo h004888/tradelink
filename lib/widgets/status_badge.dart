@@ -79,13 +79,17 @@ class StatusBadge extends StatelessWidget {
         children: [
           Icon(_icon(), size: iconSize, color: fg),
           SizedBox(width: prominent ? TradeLinkSpacing.xs : 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: fontSize,
-              fontWeight: fontWeight,
-              color: fg,
-              letterSpacing: prominent ? 0.2 : 0,
+          Flexible(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: fontSize,
+                fontWeight: fontWeight,
+                color: fg,
+                letterSpacing: prominent ? 0.2 : 0,
+              ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
           ),
         ],

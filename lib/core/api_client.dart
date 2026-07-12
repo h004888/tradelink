@@ -137,7 +137,7 @@ class ApiClient {
       return FailureResult(NetworkFailure(message: 'Response không hợp lệ', statusCode: res.statusCode));
     }
 
-    if (res.statusCode >= 200 && res.statusCode < 300 && decoded['success'] == true) {
+    if (res.statusCode >= 200 && res.statusCode < 300) {
       return ResultSuccess(decoded);
     }
 
@@ -146,7 +146,10 @@ class ApiClient {
       return FailureResult(AuthFailure(message: msg));
     }
     if (res.statusCode == 404) {
-      return FailureResult(NotFoundFailure(message: msg));
+      return FailureResult(ServerFailure(message: msg, statusCode: res.statusCode));
+    }
+    if (res.statusCode >= 500) {
+      return FailureResult(ServerFailure(message: msg, statusCode: res.statusCode));
     }
     if (res.statusCode == 400 || res.statusCode == 409) {
       return FailureResult(ValidationFailure(message: msg));

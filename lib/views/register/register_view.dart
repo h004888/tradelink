@@ -213,6 +213,22 @@ class _RegisterBodyState extends State<_RegisterBody>
                               ),
                             ),
 
+                            const SizedBox(height: TradeLinkSpacing.md),
+                            _FieldGroup(
+                              label: 'Số điện thoại',
+                              hint: '0987654321',
+                              icon: Icons.phone_outlined,
+                              keyboardType: TextInputType.phone,
+                              onChanged: vm.onPhoneChanged,
+                            ),
+                            const SizedBox(height: TradeLinkSpacing.md),
+                            _FieldGroup(
+                              label: 'Địa chỉ (tùy chọn)',
+                              hint: '123 Đường ABC, Quận 1',
+                              icon: Icons.location_on_outlined,
+                              onChanged: vm.onAddressChanged,
+                            ),
+
                             // ── Terms checkbox ──
                             const SizedBox(height: TradeLinkSpacing.sm),
                             Semantics(
@@ -309,7 +325,7 @@ class _RegisterBodyState extends State<_RegisterBody>
                                   : () async {
                                       final ok = await vm.register();
                                       if (ok && context.mounted) {
-                                        context.go('${AppPaths.verifyPrompt}?email=${Uri.encodeComponent(vm.email)}');
+                                        context.go('${AppPaths.verifyOTP}?email=${Uri.encodeComponent(vm.email)}');
                                       }
                                     },
                             ),

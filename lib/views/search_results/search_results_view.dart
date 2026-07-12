@@ -3,12 +3,9 @@ import 'package:provider/provider.dart';
 
 import '../../core/ui_state.dart';
 import '../../models/listing_model.dart';
+import '../../utils/format.dart';
 import '../../utils/theme.dart';
 import '../../viewmodels/search_results_viewmodel.dart';
-import '../../widgets/empty_state.dart';
-import '../../widgets/loading_skeleton.dart';
-import '../../widgets/tradelink_app_bar.dart';
-import '../../widgets/tradelink_card.dart';
 import '../../widgets/tradelink_text.dart';
 
 class SearchResultsView extends StatelessWidget {
@@ -31,10 +28,12 @@ class _Body extends StatefulWidget {
 
 class _BodyState extends State<_Body> {
   final _controller = TextEditingController();
+  final _focusNode = FocusNode();
 
   @override
   void dispose() {
     _controller.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -44,47 +43,62 @@ class _BodyState extends State<_Body> {
 
     return Scaffold(
       backgroundColor: TradeLinkColors.surface,
-      appBar: TradeLinkAppBar(
-        title: '',
-        showBottomBorder: false,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.maybePop(context),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // ── Search bar ──
+            _buildSearchBar(vm),
+
+            // ── Content ──
+            Expanded(
+              child: vm.showSuggestions && _controller.text.isEmpty
+                  ? _buildInitialPanel(vm)
+                  : vm.showSuggestions && _controller.text.isNotEmpty
+                      ? _buildAutocompletePanel(vm)
+                      : _buildResultsPanel(vm),
+            ),
+          ],
         ),
       ),
-      body: Column(
+    );
+  }
+
+  Widget _buildSearchBar(SearchResultsViewModel vm) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(8, 8, 16, 8),
+      child: Row(
         children: [
-          // Search bar
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              TradeLinkSpacing.md, 0,
-              TradeLinkSpacing.md, TradeLinkSpacing.md,
-            ),
+          IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.maybePop(context),
+          ),
+          Expanded(
             child: Container(
               height: 48,
-              padding: const EdgeInsets.symmetric(horizontal: TradeLinkSpacing.md),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
                 color: TradeLinkColors.surfaceContainerLowest,
-                borderRadius: BorderRadius.circular(TradeLinkRadii.md),
-                border: Border.all(color: TradeLinkColors.inputBorder, width: 1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: TradeLinkColors.inputBorder),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.search, color: TradeLinkColors.onSurfaceVariant, size: 20),
-                  const SizedBox(width: TradeLinkSpacing.sm),
+                  const Icon(Icons.search, size: 20, color: TradeLinkColors.onSurfaceVariant),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: TextField(
                       controller: _controller,
+                      focusNode: _focusNode,
                       autofocus: true,
-                      style: Theme.of(context).textTheme.bodyLarge,
+                      style: const TextStyle(fontSize: 15),
                       decoration: const InputDecoration(
-                        hintText: 'Tìm kiếm sản phẩm, danh mục...',
+                        hintText: 'Tìm kiếm sản phẩm...',
                         border: InputBorder.none,
                         isDense: true,
                         contentPadding: EdgeInsets.zero,
                       ),
                       onChanged: vm.onQueryChanged,
-                      onSubmitted: (value) => vm.submitQuery(value),
+                      onSubmitted: vm.submitQuery,
                     ),
                   ),
                   if (_controller.text.isNotEmpty)
@@ -93,225 +107,378 @@ class _BodyState extends State<_Body> {
                       onPressed: () {
                         _controller.clear();
                         vm.clearSearch();
+                        _focusNode.requestFocus();
                       },
                       color: TradeLinkColors.onSurfaceVariant,
                     ),
-                  IconButton(
-                    icon: const Icon(Icons.tune),
-                    onPressed: () {},
-                    color: TradeLinkColors.onSurfaceVariant,
-                  ),
                 ],
               ),
             ),
           ),
-
-          // Content
-          Expanded(
-            child: vm.showSuggestions && _controller.text.isEmpty
-                ? _SuggestionsPanel(vm: vm, controller: _controller)
-                : switch (vm.state) {
-                    Idle() => _SuggestionsPanel(vm: vm, controller: _controller),
-                    Loading() => const LoadingSkeleton.list(itemCount: 6),
-                    Error(message: final m) => EmptyState(
-                        icon: Icons.search_off_outlined,
-                        title: 'Có lỗi xảy ra',
-                        message: m,
-                        actionLabel: 'Thử lại',
-                        onAction: () => vm.search(_controller.text),
-                      ),
-                    Success(data: final items) => items.isEmpty
-                        ? _buildEmptySearch(vm)
-                        : ListView.builder(
-                            padding: const EdgeInsets.all(TradeLinkSpacing.marginMobile),
-                            itemCount: items.length,
-                            itemBuilder: (_, i) => Padding(
-                              padding: const EdgeInsets.only(bottom: TradeLinkSpacing.sm),
-                              child: _ResultCard(
-                                item: items[i],
-                                onTap: () => vm.goToItem(context, items[i].id),
-                              ),
-                            ),
-                          ),
-                    _ => const SizedBox.shrink(),
-                  },
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildEmptySearch(SearchResultsViewModel vm) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        children: [
-          const SizedBox(height: 40),
-          Icon(Icons.search_off_rounded, size: 64,
-              color: TradeLinkColors.onSurfaceVariant.withValues(alpha: 0.4)),
-          const SizedBox(height: 16),
-          Text(
-            'Không tìm thấy kết quả cho "${vm.query}"',
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Thử các gợi ý sau:',
-            style: TextStyle(color: TradeLinkColors.onSurfaceVariant),
-          ),
-          const SizedBox(height: 16),
-          _SuggestionChip(label: 'Mở rộng khoảng giá', onTap: () {}),
-          const SizedBox(height: 8),
-          _SuggestionChip(label: 'Tăng bán kính tìm kiếm', onTap: () {}),
-          const SizedBox(height: 8),
-          _SuggestionChip(label: 'Xóa bộ lọc hiện tại', onTap: () {}),
-          const SizedBox(height: 8),
-          _SuggestionChip(label: 'Lưu tìm kiếm để nhận thông báo', onTap: () {}),
-        ],
-      ),
-    );
-  }
-}
-
-class _SuggestionsPanel extends StatelessWidget {
-  final SearchResultsViewModel vm;
-  final TextEditingController controller;
-  const _SuggestionsPanel({required this.vm, required this.controller});
-
-  @override
-  Widget build(BuildContext context) {
+  // ── Initial panel (popular + recent) ──
+  Widget _buildInitialPanel(SearchResultsViewModel vm) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       children: [
-        // Recent searches
-        if (vm.recentSearches.isNotEmpty) ...[
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Row(
-              children: [
-                Icon(Icons.history, size: 16, color: TradeLinkColors.onSurfaceVariant),
-                const SizedBox(width: 8),
-                const Text('Tìm kiếm gần đây',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
-              ],
-            ),
-          ),
-          ...vm.recentSearches.map((s) => ListTile(
-            dense: true,
-            leading: Icon(Icons.access_time, size: 16,
-                color: TradeLinkColors.onSurfaceVariant.withValues(alpha: 0.5)),
-            title: Text(s),
-            trailing: IconButton(
-              icon: Icon(Icons.close, size: 16,
-                  color: TradeLinkColors.onSurfaceVariant.withValues(alpha: 0.5)),
-              onPressed: () => vm.removeRecentSearch(s),
-            ),
-            onTap: () => vm.selectSuggestion(s),
-          )),
-          const Divider(),
-        ],
-
         // Popular searches
-        Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: Row(
-            children: [
-              Icon(Icons.trending_up, size: 16, color: TradeLinkColors.onSurfaceVariant),
-              const SizedBox(width: 8),
-              const Text('Tìm kiếm phổ biến',
-                  style: TextStyle(fontWeight: FontWeight.w600)),
-            ],
-          ),
-        ),
+        _buildSectionHeader('🔥 Tìm kiếm phổ biến'),
+        const SizedBox(height: 8),
         Wrap(
           spacing: 8,
           runSpacing: 8,
           children: vm.popularSearches.map((s) => ActionChip(
             label: Text(s, style: const TextStyle(fontSize: 13)),
             onPressed: () {
-              controller.text = s;
-              vm.selectSuggestion(s);
+              _controller.text = s;
+              vm.submitQuery(s);
             },
           )).toList(),
+        ),
+
+        // Recent searches
+        if (vm.recentSearches.isNotEmpty) ...[
+          const SizedBox(height: 24),
+          _buildSectionHeader('🕐 Lịch sử tìm kiếm'),
+          const SizedBox(height: 8),
+          ...vm.recentSearches.map((s) => ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.access_time, size: 18, color: TradeLinkColors.onSurfaceVariant),
+            title: Text(s, style: const TextStyle(fontSize: 14)),
+            trailing: IconButton(
+              icon: const Icon(Icons.close, size: 16),
+              onPressed: () => vm.removeRecentSearch(s),
+              color: TradeLinkColors.onSurfaceVariant,
+            ),
+            onTap: () {
+              _controller.text = s;
+              vm.submitQuery(s);
+            },
+          )),
+          Center(
+            child: TextButton(
+              onPressed: vm.clearAllRecentSearches,
+              child: const Text('Xóa tất cả', style: TextStyle(fontSize: 13)),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  // ── Autocomplete panel ──
+  Widget _buildAutocompletePanel(SearchResultsViewModel vm) {
+    if (vm.suggestions == null) {
+      return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+    }
+
+    final hasCategories = vm.suggestions!.categories.isNotEmpty;
+    final hasProducts = vm.suggestions!.products.isNotEmpty;
+
+    if (!hasCategories && !hasProducts) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search_off, size: 48,
+              color: TradeLinkColors.onSurfaceVariant.withValues(alpha: 0.4)),
+            const SizedBox(height: 12),
+            Text('Không tìm thấy gợi ý cho "${vm.query}"',
+              style: TextStyle(color: TradeLinkColors.onSurfaceVariant)),
+          ],
+        ),
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      children: [
+        // Category suggestions
+        if (hasCategories) ...[
+          _buildSectionHeader('📂 Danh mục'),
+          const SizedBox(height: 4),
+          ...vm.suggestions!.categories.map((c) => ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Container(
+              width: 40, height: 40,
+              decoration: BoxDecoration(
+                color: TradeLinkColors.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              alignment: Alignment.center,
+              child: const Icon(Icons.folder_outlined, size: 20, color: TradeLinkColors.onSurfaceVariant),
+            ),
+            title: Text(c.name, style: const TextStyle(fontSize: 14)),
+            trailing: const Icon(Icons.chevron_right, size: 20),
+            onTap: () {
+              _controller.text = c.name;
+              vm.submitQuery(c.name);
+            },
+          )),
+        ],
+
+        // Product suggestions
+        if (hasProducts) ...[
+          const SizedBox(height: 16),
+          _buildSectionHeader('🛍️ Sản phẩm liên quan'),
+          const SizedBox(height: 4),
+          ...vm.suggestions!.products.map((p) => ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                width: 48, height: 48,
+                color: TradeLinkColors.surfaceContainerHigh,
+                child: p.imageUrl.isNotEmpty
+                    ? Image.network(p.imageUrl, fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Icon(Icons.image_outlined,
+                          color: TradeLinkColors.outlineVariant))
+                    : const Icon(Icons.image_outlined, color: TradeLinkColors.outlineVariant),
+              ),
+            ),
+            title: Text(p.title, maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 14)),
+            subtitle: p.price != null
+                ? TradeLinkText.money(formatVnd(p.price!), size: 'compact')
+                : null,
+            onTap: () => vm.goToItem(context, p.id),
+          )),
+        ],
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  // ── Results panel ──
+  Widget _buildResultsPanel(SearchResultsViewModel vm) {
+    return switch (vm.state) {
+      Loading() => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      Error(message: final m) => _buildError(m, vm),
+      Success(data: final items) => items.isEmpty
+          ? _buildEmpty(vm)
+          : _buildResultsList(vm, items),
+      _ => const SizedBox.shrink(),
+    };
+  }
+
+  Widget _buildResultsList(SearchResultsViewModel vm, List<Listing> items) {
+    return Column(
+      children: [
+        // Filter chips
+        _buildFilterChips(vm),
+        // Results count
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Tìm thấy ${items.length} kết quả cho "${vm.query}"',
+              style: TextStyle(color: TradeLinkColors.onSurfaceVariant, fontSize: 13),
+            ),
+          ),
+        ),
+        // Results list
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: items.length,
+            itemBuilder: (_, i) => _ResultCard(
+              item: items[i],
+              onTap: () => vm.goToItem(context, items[i].id),
+            ),
+          ),
         ),
       ],
     );
   }
-}
 
-class _SuggestionChip extends StatelessWidget {
-  final String label;
-  final VoidCallback onTap;
-  const _SuggestionChip({required this.label, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return ActionChip(
-      label: Text(label, style: const TextStyle(fontSize: 13)),
-      avatar: const Icon(Icons.lightbulb_outline, size: 16),
-      onPressed: onTap,
+  Widget _buildFilterChips(SearchResultsViewModel vm) {
+    return Container(
+      height: 48,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          _FilterChip(
+            label: 'Tất cả',
+            selected: vm.typeFilter == null,
+            onTap: () => vm.setTypeFilter(null),
+          ),
+          const SizedBox(width: 8),
+          _FilterChip(
+            label: 'Bán',
+            selected: vm.typeFilter == ListingType.sale,
+            onTap: () => vm.setTypeFilter(ListingType.sale),
+          ),
+          const SizedBox(width: 8),
+          _FilterChip(
+            label: 'Trao đổi',
+            selected: vm.typeFilter == ListingType.trade,
+            onTap: () => vm.setTypeFilter(ListingType.trade),
+          ),
+        ],
+      ),
     );
+  }
+
+  Widget _buildError(String message, SearchResultsViewModel vm) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 48,
+              color: TradeLinkColors.onSurfaceVariant.withValues(alpha: 0.4)),
+            const SizedBox(height: 16),
+            Text(message, textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 14)),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => vm.search(vm.query),
+              child: const Text('Thử lại'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmpty(SearchResultsViewModel vm) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search_off_rounded, size: 64,
+              color: TradeLinkColors.onSurfaceVariant.withValues(alpha: 0.4)),
+            const SizedBox(height: 16),
+            Text(
+              'Không tìm thấy kết quả cho "${vm.query}"',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Thử từ khóa khác hoặc xem danh mục',
+              style: TextStyle(color: TradeLinkColors.onSurfaceVariant),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Text(title,
+      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15));
   }
 }
 
-class _Chip extends StatelessWidget {
+// ── Filter Chip ──
+class _FilterChip extends StatelessWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
-  const _Chip({required this.label, required this.selected, required this.onTap});
+
+  const _FilterChip({required this.label, required this.selected, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return ChoiceChip(
-      label: Text(label, style: TextStyle(fontWeight: selected ? FontWeight.w600 : FontWeight.w500)),
-      selected: selected,
-      onSelected: (_) => onTap(),
-      selectedColor: TradeLinkColors.primaryContainer,
-      labelStyle: TextStyle(color: selected ? Colors.white : TradeLinkColors.onSurface),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(TradeLinkRadii.full)),
-      side: BorderSide.none,
-      showCheckmark: false,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? TradeLinkColors.primaryContainer : TradeLinkColors.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? TradeLinkColors.primaryContainer : TradeLinkColors.cardBorder,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+            color: selected ? Colors.white : TradeLinkColors.onSurface,
+          ),
+        ),
+      ),
     );
   }
 }
 
+// ── Result Card ──
 class _ResultCard extends StatelessWidget {
   final Listing item;
   final VoidCallback onTap;
+
   const _ResultCard({required this.item, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return TradeLinkCard(
-      onTap: onTap,
-      padding: const EdgeInsets.all(TradeLinkSpacing.sm),
-      child: Row(
-        children: [
-          Container(
-            width: 72, height: 72,
-            decoration: BoxDecoration(
-              color: TradeLinkColors.surfaceContainerHigh,
-              borderRadius: BorderRadius.circular(TradeLinkRadii.md),
-            ),
-            alignment: Alignment.center,
-            child: const Icon(Icons.image_outlined, size: 32, color: TradeLinkColors.outlineVariant),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: TradeLinkColors.surfaceContainerLowest,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: TradeLinkColors.cardBorder),
           ),
-          const SizedBox(width: TradeLinkSpacing.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(item.title, maxLines: 2, overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600, height: 1.3)),
-                const SizedBox(height: TradeLinkSpacing.xs),
-                TradeLinkText.money(item.priceFormatted, size: 'compact'),
-              ],
-            ),
+          child: Row(
+            children: [
+              // Image
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  width: 72, height: 72,
+                  color: TradeLinkColors.surfaceContainerHigh,
+                  child: item.imageUrls.isNotEmpty
+                      ? Image.network(item.imageUrls.first, fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const Icon(Icons.image_outlined,
+                            color: TradeLinkColors.outlineVariant, size: 32))
+                      : const Icon(Icons.image_outlined,
+                          color: TradeLinkColors.outlineVariant, size: 32),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(item.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, height: 1.3)),
+                    const SizedBox(height: 4),
+                    TradeLinkText.money(item.priceFormatted, size: 'compact'),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.location_on_outlined, size: 12,
+                          color: TradeLinkColors.onSurfaceVariant),
+                        const SizedBox(width: 4),
+                        Text(item.category,
+                          style: TextStyle(fontSize: 12, color: TradeLinkColors.onSurfaceVariant)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: TradeLinkColors.onSurfaceVariant),
+            ],
           ),
-          const Icon(Icons.chevron_right, color: TradeLinkColors.onSurfaceVariant),
-        ],
+        ),
       ),
     );
   }

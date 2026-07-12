@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/ui_state.dart';
 import '../../models/transaction_model.dart';
 import '../../utils/constants.dart';
+import '../../utils/format.dart';
 import '../../utils/theme.dart';
 import '../../viewmodels/transaction_sale_viewmodel.dart';
 import '../../widgets/empty_state.dart';
@@ -80,7 +81,7 @@ class _Body extends StatelessWidget {
                       ),
                       const SizedBox(height: TradeLinkSpacing.sm),
                       TradeLinkText.money(
-                        '${tx.amount?.toStringAsFixed(0) ?? "---"} VNĐ',
+                        formatVnd(tx.amount),
                         size: 'large',
                       ),
                       const SizedBox(height: TradeLinkSpacing.sm),

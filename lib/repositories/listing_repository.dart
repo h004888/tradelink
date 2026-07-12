@@ -1,7 +1,9 @@
 import '../core/api_client.dart';
 import '../core/failure.dart';
 import '../core/result.dart';
+import '../models/filter_model.dart';
 import '../models/listing_model.dart';
+import '../models/seller_stats.dart';
 
 class HomeData {
   final List<Listing> featured;
@@ -9,6 +11,8 @@ class HomeData {
   final List<Listing> popular;
   final List<String> categories;
   final List<TopSellerInfo> topSellers;
+  final bool hasMore;
+  final int page;
 
   const HomeData({
     required this.featured,
@@ -16,6 +20,22 @@ class HomeData {
     required this.popular,
     required this.categories,
     required this.topSellers,
+    this.hasMore = false,
+    this.page = 1,
+  });
+}
+
+class FeedData {
+  final List<Listing> listings;
+  final List<String> categories;
+  final bool hasMore;
+  final int page;
+
+  const FeedData({
+    required this.listings,
+    required this.categories,
+    this.hasMore = false,
+    this.page = 1,
   });
 }
 
@@ -52,15 +72,19 @@ class ListingRepository {
         price: (j['price'] as num?)?.toDouble(),
         imageUrls: (j['imageUrls'] as List?)?.map((e) => e.toString()).toList() ?? const [],
         category: j['category'] as String? ?? '',
+        categoryName: j['categoryName'] as String?,
+        categoryId: j['categoryId']?.toString(),
         condition: _parseCondition(j['condition'] as String?),
         type: _parseType(j['type'] as String?),
         status: _parseStatus(j['status'] as String?),
         sellerId: j['sellerId']?.toString() ?? '',
         sellerName: j['sellerName'] as String? ?? '',
+        location: j['location'] as String?,
         views: (j['views'] as num?)?.toInt() ?? 0,
         interests: (j['interests'] as num?)?.toInt() ?? 0,
         saves: (j['saves'] as num?)?.toInt() ?? 0,
         createdAt: DateTime.tryParse(j['createdAt']?.toString() ?? '') ?? DateTime.now(),
+        updatedAt: j['updatedAt'] != null ? DateTime.tryParse(j['updatedAt'].toString()) : null,
         boostExpiry: j['boostExpiry'] != null ? DateTime.tryParse(j['boostExpiry'].toString()) : null,
       );
 
@@ -82,6 +106,17 @@ class ListingRepository {
       ResultSuccess(data: final d) => ResultSuccess<Listing>(_fromJson(d['data'] as Map<String, dynamic>)),
       FailureResult(failure: final f) => FailureResult<Listing>(f),
     };
+  }
+
+  Future<Result<SellerStats>> getSellerStats(String sellerId) async {
+    final res = await _api.get('/users/$sellerId/stats');
+    if (res.isFailure) return FailureResult<SellerStats>((res as FailureResult).failure);
+    try {
+      final data = (res as ResultSuccess<Map<String, dynamic>>).data['data'];
+      return ResultSuccess(SellerStats.fromJson(data));
+    } catch (e) {
+      return FailureResult(UnknownFailure(message: 'Lỗi tải thông tin người bán'));
+    }
   }
 
   Future<Result<Listing>> createListing(Listing listing) async {
@@ -127,8 +162,8 @@ class ListingRepository {
   }
 
   /// Load tất cả section cho Home screen
-  Future<Result<HomeData>> getHomeData() async {
-    final res = await _api.get('/home');
+  Future<Result<HomeData>> getHomeData({int page = 1}) async {
+    final res = await _api.get('/home', query: {'page': page.toString()});
     if (res.isFailure) return FailureResult<HomeData>((res as FailureResult<Map<String, dynamic>>).failure);
     try {
       final d = (res as ResultSuccess<Map<String, dynamic>>).data;
@@ -142,9 +177,35 @@ class ListingRepository {
         popular: ((data['popular'] as List?) ?? []).map((e) => _fromJson(e as Map<String, dynamic>)).toList(),
         categories: ((data['categories'] as List?) ?? []).map((e) => e.toString()).toList(),
         topSellers: ((data['topSellers'] as List?) ?? []).map((e) => TopSellerInfo.fromJson(e as Map<String, dynamic>)).toList(),
+        hasMore: data['hasMore'] ?? false,
+        page: data['page'] ?? page,
       ));
     } catch (e) {
       return FailureResult(UnknownFailure(message: 'Lỗi xử lý dữ liệu home: $e'));
+    }
+  }
+
+  /// Load feed — tất cả sản phẩm, infinite scroll
+  Future<Result<FeedData>> getFeed({int page = 1, FeedFilter? filter}) async {
+    final query = {'page': page.toString()};
+    if (filter != null) query.addAll(filter.toQuery());
+
+    final res = await _api.get('/feed', query: query);
+    if (res.isFailure) return FailureResult<FeedData>((res as FailureResult<Map<String, dynamic>>).failure);
+    try {
+      final d = (res as ResultSuccess<Map<String, dynamic>>).data;
+      final data = d['data'] as Map<String, dynamic>?;
+      if (data == null) {
+        return const FailureResult(NetworkFailure(message: 'Dữ liệu feed không hợp lệ'));
+      }
+      return ResultSuccess<FeedData>(FeedData(
+        listings: ((data['listings'] as List?) ?? []).map((e) => _fromJson(e as Map<String, dynamic>)).toList(),
+        categories: ((data['categories'] as List?) ?? []).map((e) => e.toString()).toList(),
+        hasMore: data['hasMore'] ?? false,
+        page: data['page'] ?? page,
+      ));
+    } catch (e) {
+      return FailureResult(UnknownFailure(message: 'Lỗi xử lý feed: $e'));
     }
   }
 
@@ -186,6 +247,7 @@ class ListingRepository {
     String? status,
     String? type,
     String? category,
+    String? categoryId,
     int? page,
     int? limit,
   }) async {
@@ -193,6 +255,7 @@ class ListingRepository {
     if (status != null) query['status'] = status;
     if (type != null) query['type'] = type;
     if (category != null) query['category'] = category;
+    if (categoryId != null) query['categoryId'] = categoryId;
     if (page != null) query['page'] = page.toString();
     if (limit != null) query['limit'] = limit.toString();
     final res = await _api.get('/listings', query: query.isEmpty ? null : query);

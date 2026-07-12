@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/ui_state.dart';
 import '../../models/transaction_model.dart';
 import '../../repositories/transaction_repository.dart';
+import '../../utils/format.dart';
 import '../../utils/theme.dart';
 import '../../viewmodels/transaction_list_viewmodel.dart';
 import '../../widgets/empty_state.dart';
@@ -139,9 +140,7 @@ class _TransactionTile extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            transaction.amount != null
-                ? '${transaction.amount!.toStringAsFixed(0)} VNĐ'
-                : 'Trao đổi',
+            formatVnd(transaction.amount),
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,

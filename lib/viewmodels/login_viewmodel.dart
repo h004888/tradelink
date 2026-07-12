@@ -24,7 +24,10 @@ class LoginViewModel extends ChangeNotifier {
 
   void onEmailChanged(String value) => _email = value;
   void onPasswordChanged(String value) => _password = value;
-  void toggleObscure() => _obscurePassword = !_obscurePassword;
+  void toggleObscure() {
+    _obscurePassword = !_obscurePassword;
+    notifyListeners();
+  }
 
   Future<bool> login() async {
     if (_email.isEmpty || _password.isEmpty) {

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/ui_state.dart';
@@ -12,13 +11,14 @@ import '../../widgets/tradelink_app_bar.dart';
 import '../../widgets/tradelink_text.dart';
 
 class CategoryView extends StatelessWidget {
+  final String categoryId;
   final String categoryName;
-  const CategoryView({super.key, required this.categoryName});
+  const CategoryView({super.key, required this.categoryId, this.categoryName = ''});
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => CategoryViewModel(categoryName: categoryName)..load(),
+      create: (_) => CategoryViewModel(categoryId: categoryId, categoryName: categoryName)..load(),
       child: const _Body(),
     );
   }
@@ -71,6 +71,8 @@ class _Body extends StatelessWidget {
   }
 
   Widget _buildItemCard(BuildContext context, Listing item, CategoryViewModel vm, ThemeData theme) {
+    final hasImages = item.imageUrls.isNotEmpty;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: InkWell(
@@ -85,14 +87,26 @@ class _Body extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Container(
-                width: 64, height: 64,
-                decoration: BoxDecoration(
+              // ── Ảnh sản phẩm ──
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  width: 64, height: 64,
                   color: TradeLinkColors.surfaceContainerHigh,
-                  borderRadius: BorderRadius.circular(8),
+                  child: hasImages
+                      ? Image.network(
+                          item.imageUrls.first,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const Icon(
+                            Icons.image_outlined,
+                            color: TradeLinkColors.outlineVariant,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.image_outlined,
+                          color: TradeLinkColors.outlineVariant,
+                        ),
                 ),
-                alignment: Alignment.center,
-                child: const Icon(Icons.image_outlined, color: TradeLinkColors.outlineVariant),
               ),
               const SizedBox(width: 12),
               Expanded(

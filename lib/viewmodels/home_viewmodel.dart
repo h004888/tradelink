@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
 import '../../core/result.dart';
 import '../../core/ui_state.dart';
+import '../../models/filter_model.dart';
+import '../../models/listing_model.dart';
 import '../../models/transaction_model.dart';
 import '../../repositories/listing_repository.dart';
 import '../../repositories/transaction_repository.dart';
@@ -14,44 +16,55 @@ class HomeViewModel extends ChangeNotifier {
   final ListingRepository _listingRepo = ListingRepository();
   final TransactionRepository _txRepo = TransactionRepository();
 
-  // ── Unified home data ──
-  UiState<HomeData> _homeData = const Loading();
-  UiState<HomeData> get homeData => _homeData;
+  // ── Feed state ──
+  UiState<List<Listing>> _feedState = const Loading();
+  UiState<List<Listing>> get feedState => _feedState;
+
+  // ── Filter state ──
+  FeedFilter _filter = const FeedFilter();
+  FeedFilter get filter => _filter;
 
   // ── Active transactions ──
   UiState<List<Transaction>> _activeTransactions = const Loading();
   UiState<List<Transaction>> get activeTransactions => _activeTransactions;
 
-  /// Có ít nhất 1 giao dịch chưa hoàn tất
   bool get hasActiveTransaction => switch (_activeTransactions) {
     Success(data: final txs) => txs.any((t) => t.escrowStep != null && t.escrowStep != EscrowStep.released),
     _ => false,
   };
 
-  // ── Categories filter ──
-  static const List<String> categories = [
-    'Tất cả', 'Điện thoại', 'Laptop', 'Xe cộ',
-    'Thời trang', 'Điện tử', 'Phụ kiện', 'Đồ gia dụng', 'Khác',
-  ];
-  int _selectedCategory = 0;
-  int get selectedCategory => _selectedCategory;
-  String get selectedCategoryName => categories[_selectedCategory];
+  // ── Pagination state ──
+  int _page = 1;
+  bool _hasMore = true;
+  bool _isLoadingMore = false;
+  String? _loadMoreError;
+
+  bool get hasMore => _hasMore;
+  bool get isLoadingMore => _isLoadingMore;
+  String? get loadMoreError => _loadMoreError;
+
+  static const int _maxPage = 50;
 
   HomeViewModel() { load(); }
 
   Future<void> load() async {
     AnalyticsService.instance.track('home_viewed');
 
-    _homeData = const Loading();
+    _page = 1;
+    _hasMore = true;
+    _loadMoreError = null;
+    _feedState = const Loading();
     _activeTransactions = const Loading();
     notifyListeners();
 
-    // Song song: home data + transactions (nếu có token)
     final futures = <Future>[
-      _listingRepo.getHomeData().then((r) {
-        _homeData = r is ResultSuccess<HomeData>
-            ? Success(r.data)
-            : Error(message: (r as FailureResult<HomeData>).failure.message, retryable: true);
+      _listingRepo.getFeed(page: 1, filter: _filter).then((r) {
+        _feedState = r is ResultSuccess<FeedData>
+            ? Success(r.data.listings)
+            : Error(message: (r as FailureResult<FeedData>).failure.message, retryable: true);
+        if (r is ResultSuccess<FeedData>) {
+          _hasMore = r.data.hasMore;
+        }
       }),
     ];
 
@@ -59,19 +72,58 @@ class HomeViewModel extends ChangeNotifier {
       futures.add(_txRepo.getAll().then((r) {
         _activeTransactions = r is ResultSuccess<List<Transaction>>
             ? Success(r.data)
-            : const Success([]); // fallback: empty → card ẩn
+            : Error(message: (r as FailureResult<List<Transaction>>).failure.message, retryable: true);
       }));
     } else {
-      _activeTransactions = const Success([]);
+      _activeTransactions = const Error(message: 'Vui lòng đăng nhập để xem giao dịch');
     }
 
     await Future.wait(futures);
     notifyListeners();
   }
 
-  Future<void> selectCategory(int i) async {
-    _selectedCategory = i;
+  Future<void> loadMore() async {
+    if (!_hasMore || _isLoadingMore || _page >= _maxPage) return;
+
+    _isLoadingMore = true;
+    _loadMoreError = null;
     notifyListeners();
+
+    _page++;
+    final res = await _listingRepo.getFeed(page: _page, filter: _filter);
+
+    if (res is ResultSuccess<FeedData>) {
+      final currentListings = (_feedState as Success<List<Listing>>).data;
+      _feedState = Success([...currentListings, ...res.data.listings]);
+      _hasMore = res.data.hasMore;
+
+      AnalyticsService.instance.track('home_load_more', properties: {
+        'page': _page,
+        'items_loaded': res.data.listings.length,
+      });
+    } else {
+      _loadMoreError = (res as FailureResult<FeedData>).failure.message;
+      _page--;
+    }
+
+    _isLoadingMore = false;
+    notifyListeners();
+  }
+
+  Future<void> retryLoadMore() async {
+    if (_loadMoreError != null) {
+      await loadMore();
+    }
+  }
+
+  void updateFilter(FeedFilter newFilter) {
+    _filter = newFilter;
+    load();
+  }
+
+  void resetFilter() {
+    _filter = const FeedFilter();
+    load();
   }
 
   void goToSearch(BuildContext context) => context.push(AppPaths.search);

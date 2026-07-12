@@ -7,18 +7,24 @@ import '../../core/ui_state.dart';
 class CategoryItem {
   final String id;
   final String name;
+  final String slug;
+  final String icon;
   final int order;
 
   const CategoryItem({
     required this.id,
     required this.name,
+    this.slug = '',
+    this.icon = 'grid_view_rounded',
     required this.order,
   });
 
   factory CategoryItem.fromJson(Map<String, dynamic> json) {
     return CategoryItem(
-      id: json['id']?.toString() ?? '',
+      id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
       name: json['name'] as String? ?? '',
+      slug: json['slug'] as String? ?? '',
+      icon: json['icon'] as String? ?? 'grid_view_rounded',
       order: (json['order'] as num?)?.toInt() ?? 0,
     );
   }
@@ -31,18 +37,6 @@ class HomeCategoryViewModel extends ChangeNotifier {
   UiState<List<CategoryItem>> _state = const Loading();
   UiState<List<CategoryItem>> get state => _state;
 
-  /// Danh mục fallback khi API lỗi
-  static const List<CategoryItem> fallbackCategories = [
-    CategoryItem(id: 'cat_0', name: 'Điện thoại', order: 0),
-    CategoryItem(id: 'cat_1', name: 'Laptop', order: 1),
-    CategoryItem(id: 'cat_2', name: 'Xe cộ', order: 2),
-    CategoryItem(id: 'cat_3', name: 'Thời trang', order: 3),
-    CategoryItem(id: 'cat_4', name: 'Điện tử', order: 4),
-    CategoryItem(id: 'cat_5', name: 'Phụ kiện', order: 5),
-    CategoryItem(id: 'cat_6', name: 'Đồ gia dụng', order: 6),
-    CategoryItem(id: 'cat_7', name: 'Khác', order: 7),
-  ];
-
   HomeCategoryViewModel() { load(); }
 
   Future<void> load() async {
@@ -50,17 +44,19 @@ class HomeCategoryViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final res = await _api.get('/search/categories');
+      final res = await _api.get('/categories');
       if (res is ResultSuccess<Map<String, dynamic>>) {
         final list = ((res.data['data'] as List?) ?? [])
             .map((e) => CategoryItem.fromJson(e as Map<String, dynamic>))
             .toList();
-        _state = list.isNotEmpty ? Success(list) : Success(fallbackCategories);
+        _state = list.isNotEmpty
+            ? Success(list)
+            : const Error(message: 'Không có danh mục nào');
       } else {
-        _state = Success(fallbackCategories);
+        _state = Error(message: (res as FailureResult<Map<String, dynamic>>).failure.message, retryable: true);
       }
-    } catch (_) {
-      _state = Success(fallbackCategories);
+    } catch (e) {
+      _state = Error(message: 'Lỗi tải danh mục: $e', retryable: true);
     }
     notifyListeners();
   }

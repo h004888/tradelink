@@ -128,7 +128,14 @@ class TradeLinkButton extends StatelessWidget {
                 Icon(icon, size: iconSize),
                 const SizedBox(width: TradeLinkSpacing.xs),
               ],
-              Text(label, style: baseTextStyle),
+              Flexible(
+                child: Text(
+                  label,
+                  style: baseTextStyle,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ),
             ],
           );
 

@@ -26,11 +26,12 @@ class ValidationFailure extends Failure {
   String toString() => 'ValidationFailure: $message';
 }
 
-class NotFoundFailure extends Failure {
-  const NotFoundFailure({required super.message});
+class ServerFailure extends Failure {
+  final int? statusCode;
+  const ServerFailure({required super.message, this.statusCode});
 
   @override
-  String toString() => 'NotFoundFailure: $message';
+  String toString() => 'ServerFailure: $message (status: $statusCode)';
 }
 
 class PermissionFailure extends Failure {

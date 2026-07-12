@@ -8,19 +8,20 @@ import '../../utils/constants.dart';
 
 class CategoryViewModel extends ChangeNotifier {
   final ListingRepository _repository = ListingRepository();
+  final String categoryId;
   final String categoryName;
 
   UiState<List<Listing>> _state = const Idle();
   UiState<List<Listing>> get state => _state;
 
-  CategoryViewModel({required this.categoryName});
+  CategoryViewModel({required this.categoryId, this.categoryName = ''});
 
   Future<void> load() async {
     _state = const Loading();
     notifyListeners();
 
     final result = await _repository.getAllListings(
-      category: categoryName == 'Tất cả' ? null : categoryName,
+      categoryId: categoryId.isEmpty ? null : categoryId,
       status: 'active',
     );
 

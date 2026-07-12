@@ -5,9 +5,20 @@ import '../core/result.dart';
 class AuthRepository {
   final _api = ApiClient.instance;
 
-  Future<Result<bool>> register(String email, String password, String name) async {
-    final res = await _api.post('/auth/register', body: {'email': email, 'password': password, 'name': name});
-    return _setTokenFromResult(res);
+  Future<Result<Map<String, dynamic>>> register(String email, String password, String name, {String? phone, String? address}) async {
+    final body = <String, dynamic>{
+      'email': email,
+      'password': password,
+      'name': name,
+      'phone': phone,
+    };
+    if (address != null && address.isNotEmpty) body['address'] = address;
+
+    final res = await _api.post('/auth/register', body: body);
+    return switch (res) {
+      ResultSuccess(data: final d) => ResultSuccess<Map<String, dynamic>>(d['data'] ?? {}),
+      FailureResult(failure: final f) => FailureResult<Map<String, dynamic>>(f),
+    };
   }
 
   Future<Result<bool>> loginWithPassword(String email, String password) async {
@@ -82,6 +93,24 @@ class AuthRepository {
   /// A3 — xác nhận email bằng token.
   Future<Result<bool>> verifyEmail(String token) async {
     final res = await _api.post('/auth/verify-email', body: {'token': token});
+    return switch (res) {
+      ResultSuccess() => ResultSuccess<bool>(true),
+      FailureResult(failure: final f) => FailureResult<bool>(f),
+    };
+  }
+
+  /// Verify OTP
+  Future<Result<Map<String, dynamic>>> verifyOTP(String email, String otp) async {
+    final res = await _api.post('/auth/verify-otp', body: {'email': email, 'otp': otp});
+    return switch (res) {
+      ResultSuccess(data: final d) => ResultSuccess<Map<String, dynamic>>(d['data']),
+      FailureResult(failure: final f) => FailureResult<Map<String, dynamic>>(f),
+    };
+  }
+
+  /// Resend OTP
+  Future<Result<bool>> resendOTP(String email) async {
+    final res = await _api.post('/auth/resend-otp', body: {'email': email});
     return switch (res) {
       ResultSuccess() => ResultSuccess<bool>(true),
       FailureResult(failure: final f) => FailureResult<bool>(f),
