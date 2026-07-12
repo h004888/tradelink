@@ -40,4 +40,40 @@ class AuthRepository {
       FailureResult(failure: final f) => FailureResult<Map<String, dynamic>>(f),
     };
   }
+
+  Future<Result<bool>> loginWithPassword(String email, String password) async {
+    final res = await _api.post(
+      '/auth/login',
+      body: {'email': email, 'password': password},
+    );
+    return _setTokenFromResult(res);
+  }
+
+  Future<Result<bool>> _setTokenFromResult(
+    Result<Map<String, dynamic>> res,
+  ) async {
+    if (res is ResultSuccess<Map<String, dynamic>>) {
+      final data = res.data['data'] as Map;
+      await _api.setToken(data['token'] as String);
+      if (data['refreshToken'] != null) {
+        await _api.setRefreshToken(data['refreshToken'] as String);
+      }
+      if (data['userId'] != null) {
+        await _api.setUserId(data['userId'] as String);
+      } else if (data['user'] is Map) {
+        final userId =
+            (data['user'] as Map)['_id'] as String? ??
+            (data['user'] as Map)['id'] as String?;
+        if (userId != null) await _api.setUserId(userId);
+      }
+      if (data['user'] is Map) {
+        final role = (data['user'] as Map)['role'] as String?;
+        if (role != null) await _api.setRole(role);
+      }
+      return ResultSuccess<bool>(true);
+    }
+    return FailureResult<bool>(
+      (res as FailureResult<Map<String, dynamic>>).failure,
+    );
+  }
 }
