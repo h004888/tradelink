@@ -54,6 +54,37 @@ class AuthRepository {
     return _setTokenFromResult(res);
   }
 
+  /// Khi token hết hạn, client gọi endpoint /refresh với refreshToken để lấy token mới.
+  /// Backend thực hiện refresh token rotation: token cũ bị vô hiệu, cấp cả access + refresh mới.
+  Future<Result<bool>> refreshToken() async {
+    final oldRefreshToken = _api.getRefreshToken();
+    if (oldRefreshToken == null) {
+      return FailureResult(AuthFailure(message: 'Không có refresh token'));
+    }
+    final res = await _api.post(
+      '/auth/refresh',
+      body: {'refreshToken': oldRefreshToken},
+    );
+    if (res is FailureResult<Map<String, dynamic>>) {
+      // Refresh failed → clear tokens
+      await _api.clearTokens();
+      return FailureResult<bool>((res).failure);
+    }
+    final s = res as ResultSuccess<Map<String, dynamic>>;
+    final data = s.data['data'] as Map;
+    final newToken = data['token'] as String;
+    final newRefreshToken = data['refreshToken'] as String?;
+    await _api.setToken(newToken);
+    if (newRefreshToken != null) {
+      await _api.setRefreshToken(newRefreshToken);
+    }
+    if (data['user'] is Map) {
+      final role = (data['user'] as Map)['role'] as String?;
+      if (role != null) await _api.setRole(role);
+    }
+    return ResultSuccess<bool>(true);
+  }
+
   Future<Result<bool>> _setTokenFromResult(
     Result<Map<String, dynamic>> res,
   ) async {
