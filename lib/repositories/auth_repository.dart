@@ -108,6 +108,32 @@ class AuthRepository {
     };
   }
 
+  /// A2 — yêu cầu reset password, trả token (workaround vì chưa có email service)
+  Future<Result<String>> forgotPassword(String email) async {
+    final res = await _api.post(
+      '/auth/forgot-password',
+      body: {'email': email},
+    );
+    return switch (res) {
+      ResultSuccess(data: final d) => ResultSuccess<String>(
+        ((d['data'] as Map?)?['token'] as String?) ?? '',
+      ),
+      FailureResult(failure: final f) => FailureResult<String>(f),
+    };
+  }
+
+  /// A2 — đặt lại mật khẩu bằng token.
+  Future<Result<bool>> resetPassword(String token, String newPassword) async {
+    final res = await _api.post(
+      '/auth/reset-password',
+      body: {'token': token, 'newPassword': newPassword},
+    );
+    return switch (res) {
+      ResultSuccess() => ResultSuccess<bool>(true),
+      FailureResult(failure: final f) => FailureResult<bool>(f),
+    };
+  }
+
   Future<Result<bool>> _setTokenFromResult(
     Result<Map<String, dynamic>> res,
   ) async {
