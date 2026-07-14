@@ -134,6 +134,41 @@ class AuthRepository {
     };
   }
 
+  /// A3 — xác nhận email bằng token.
+  Future<Result<bool>> verifyEmail(String token) async {
+    final res = await _api.post('/auth/verify-email', body: {'token': token});
+    return switch (res) {
+      ResultSuccess() => ResultSuccess<bool>(true),
+      FailureResult(failure: final f) => FailureResult<bool>(f),
+    };
+  }
+
+  /// Verify OTP
+  Future<Result<Map<String, dynamic>>> verifyOTP(
+    String email,
+    String otp,
+  ) async {
+    final res = await _api.post(
+      '/auth/verify-otp',
+      body: {'email': email, 'otp': otp},
+    );
+    return switch (res) {
+      ResultSuccess(data: final d) => ResultSuccess<Map<String, dynamic>>(
+        d['data'],
+      ),
+      FailureResult(failure: final f) => FailureResult<Map<String, dynamic>>(f),
+    };
+  }
+
+  /// Resend OTP
+  Future<Result<bool>> resendOTP(String email) async {
+    final res = await _api.post('/auth/resend-otp', body: {'email': email});
+    return switch (res) {
+      ResultSuccess() => ResultSuccess<bool>(true),
+      FailureResult(failure: final f) => FailureResult<bool>(f),
+    };
+  }
+
   Future<Result<bool>> _setTokenFromResult(
     Result<Map<String, dynamic>> res,
   ) async {
