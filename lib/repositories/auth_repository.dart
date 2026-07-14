@@ -85,6 +85,29 @@ class AuthRepository {
     return ResultSuccess<bool>(true);
   }
 
+  Future<void> logout() async {
+    await _api.post('/auth/logout');
+    await _api.clearTokens();
+    // Dispose chat socket để ngắt kết nối realtime với token cũ,
+    // đảm bảo user mới login sẽ reconnect với token mới.
+    ChatSocket.instance.dispose();
+  }
+
+  /// Đổi mật khẩu — backend yêu cầu Bearer token, verify mật khẩu cũ và hash mật khẩu mới.
+  Future<Result<bool>> changePassword(
+    String oldPassword,
+    String newPassword,
+  ) async {
+    final res = await _api.post(
+      '/auth/change-password',
+      body: {'oldPassword': oldPassword, 'newPassword': newPassword},
+    );
+    return switch (res) {
+      ResultSuccess() => ResultSuccess<bool>(true),
+      FailureResult(failure: final f) => FailureResult<bool>(f),
+    };
+  }
+
   Future<Result<bool>> _setTokenFromResult(
     Result<Map<String, dynamic>> res,
   ) async {
