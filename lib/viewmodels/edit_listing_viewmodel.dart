@@ -17,6 +17,15 @@ class EditListingViewModel extends ChangeNotifier {
   late Listing _listing;
   Listing get listing => _listing;
 
+  String? _titleError;
+  String? get titleError => _titleError;
+  String? _descriptionError;
+  String? get descriptionError => _descriptionError;
+  String? _priceError;
+  String? get priceError => _priceError;
+  String? _exchangeForError;
+  String? get exchangeForError => _exchangeForError;
+
   EditListingViewModel({required this.listingId}) { load(); }
 
   /// Public reload method — cho phép View gọi retry khi loadState là Error.
@@ -31,20 +40,32 @@ class EditListingViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void updateField(Listing Function(Listing) update) { _listing = update(_listing); notifyListeners(); }
+  void updateField(Listing Function(Listing) update) { 
+    _listing = update(_listing); 
+    _titleError = null;
+    _descriptionError = null;
+    _priceError = null;
+    _exchangeForError = null;
+    notifyListeners(); 
+  }
 
   Future<bool> save() async {
-    if (_listing.title.isEmpty || _listing.description.isEmpty) {
-      _saveState = const Error(message: 'Tiêu đề và mô tả không được để trống'); notifyListeners(); return false;
-    }
-    if (_listing.type == ListingType.sale && _listing.price == null) {
-      _saveState = const Error(message: 'Vui lòng nhập giá bán'); notifyListeners(); return false;
-    }
-    if (_listing.type == ListingType.trade && (_listing.exchangeFor == null || _listing.exchangeFor!.isEmpty)) {
-      _saveState = const Error(message: 'Vui lòng mô tả món đồ bạn muốn đổi'); notifyListeners(); return false;
-    }
-    if (_listing.type == ListingType.both && (_listing.price == null || _listing.exchangeFor == null || _listing.exchangeFor!.isEmpty)) {
-      _saveState = const Error(message: 'Vui lòng nhập giá bán và mô tả món đồ muốn đổi'); notifyListeners(); return false;
+    bool hasError = false;
+    
+    if (_listing.title.isEmpty) { _titleError = 'Vui lòng nhập tiêu đề'; hasError = true; } else _titleError = null;
+    if (_listing.description.isEmpty) { _descriptionError = 'Vui lòng nhập mô tả'; hasError = true; } else _descriptionError = null;
+    
+    if (_listing.type == ListingType.sale || _listing.type == ListingType.both) {
+      if (_listing.price == null) { _priceError = 'Vui lòng nhập giá bán'; hasError = true; } else _priceError = null;
+    } else _priceError = null;
+
+    if (_listing.type == ListingType.trade || _listing.type == ListingType.both) {
+      if (_listing.exchangeFor == null || _listing.exchangeFor!.isEmpty) { _exchangeForError = 'Vui lòng mô tả món đồ bạn muốn đổi'; hasError = true; } else _exchangeForError = null;
+    } else _exchangeForError = null;
+
+    if (hasError) {
+      notifyListeners();
+      return false;
     }
 
     _saveState = const Loading(); notifyListeners();
