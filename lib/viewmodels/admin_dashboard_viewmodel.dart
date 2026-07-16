@@ -17,7 +17,7 @@ class AdminDashboardViewModel extends ChangeNotifier {
   int get pendingDisputes => data.pendingDisputes;
   List<Dispute> get disputes => data.recentDisputes;
 
-  AdminDashboardData _empty = AdminDashboardData(
+  final AdminDashboardData _empty = AdminDashboardData(
     totalUsers: 0,
     totalListings: 0,
     activeListings: 0,

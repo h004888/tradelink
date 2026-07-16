@@ -8,7 +8,6 @@ import '../../viewmodels/offers_list_viewmodel.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/tradelink_app_bar.dart';
 import '../../widgets/tradelink_card.dart';
-import '../../widgets/tradelink_text.dart';
 
 class OffersListView extends StatelessWidget {
   const OffersListView({super.key});
@@ -108,7 +107,7 @@ class _Body extends StatelessWidget {
               return ListView.separated(
                 padding: const EdgeInsets.all(TradeLinkSpacing.marginMobile),
                 itemCount: vm.items.length,
-                separatorBuilder: (_, __) =>
+                separatorBuilder: (_, _) =>
                     const SizedBox(height: TradeLinkSpacing.sm),
                 itemBuilder: (_, i) {
                   final o = vm.items[i];

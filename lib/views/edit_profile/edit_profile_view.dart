@@ -134,7 +134,7 @@ class _EditProfileBody extends StatelessWidget {
                             fit: BoxFit.cover,
                             width: 96,
                             height: 96,
-                            errorBuilder: (_, __, ___) => const Icon(
+                            errorBuilder: (_, _, _) => const Icon(
                               Icons.person_outline,
                               size: 48,
                               color: TradeLinkColors.onSurfaceVariant,

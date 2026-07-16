@@ -15,7 +15,6 @@ import '../../widgets/status_badge.dart';
 import '../../widgets/tradelink_app_bar.dart';
 import '../../widgets/tradelink_button.dart';
 import '../../widgets/tradelink_card.dart';
-import '../../widgets/tradelink_text.dart';
 
 class ItemDetailView extends StatelessWidget {
   final String itemId;
@@ -168,7 +167,7 @@ class _BodyState extends State<_Body> {
               itemBuilder: (_, i) => Image.network(
                 images[i],
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const SizedBox(),
+                errorBuilder: (_, _, _) => const SizedBox(),
               ),
             ),
             // Page indicator dots

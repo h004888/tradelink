@@ -68,7 +68,7 @@ class _Body extends StatelessWidget {
             : ListView.separated(
                 padding: const EdgeInsets.all(TradeLinkSpacing.marginMobile),
                 itemCount: list.length,
-                separatorBuilder: (_, __) =>
+                separatorBuilder: (_, _) =>
                     const SizedBox(height: TradeLinkSpacing.sm),
                 itemBuilder: (_, i) {
                   final n = list[i];

@@ -121,7 +121,7 @@ class _Body extends StatelessWidget {
         Success(:final data) => ListView.separated(
             padding: const EdgeInsets.all(TradeLinkSpacing.marginMobile),
             itemCount: data.length,
-            separatorBuilder: (_, __) =>
+            separatorBuilder: (_, _) =>
                 const SizedBox(height: TradeLinkSpacing.sm),
             itemBuilder: (_, i) {
               final u = data[i];
@@ -262,7 +262,7 @@ class _Body extends StatelessWidget {
               ),
               const SizedBox(height: TradeLinkSpacing.sm),
               DropdownButtonFormField<String>(
-                value: role,
+                initialValue: role,
                 items: const [
                   DropdownMenuItem(value: 'buyer', child: Text('Buyer')),
                   DropdownMenuItem(value: 'seller', child: Text('Seller')),

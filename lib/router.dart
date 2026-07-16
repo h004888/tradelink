@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -133,7 +132,7 @@ class AppRouter {
     return AppPaths.home;
   }
 
-  static late final GoRouter router = GoRouter(
+  static final GoRouter router = GoRouter(
     initialLocation: _initialLocation,
     redirect: (context, state) {
       final token = ApiClient.instance.isInitialized

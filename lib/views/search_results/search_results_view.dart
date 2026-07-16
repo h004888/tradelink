@@ -6,7 +6,6 @@ import '../../models/listing_model.dart';
 import '../../utils/format.dart';
 import '../../utils/theme.dart';
 import '../../viewmodels/search_results_viewmodel.dart';
-import '../../widgets/tradelink_text.dart';
 
 class SearchResultsView extends StatelessWidget {
   const SearchResultsView({super.key});
@@ -235,7 +234,7 @@ class _BodyState extends State<_Body> {
                 color: TradeLinkColors.surfaceContainerHigh,
                 child: p.imageUrl.isNotEmpty
                     ? Image.network(p.imageUrl, fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Icon(Icons.image_outlined,
+                        errorBuilder: (_, _, _) => const Icon(Icons.image_outlined,
                           color: TradeLinkColors.outlineVariant))
                     : const Icon(Icons.image_outlined, color: TradeLinkColors.outlineVariant),
               ),
@@ -444,7 +443,7 @@ class _ResultCard extends StatelessWidget {
                   color: TradeLinkColors.surfaceContainerHigh,
                   child: item.imageUrls.isNotEmpty
                       ? Image.network(item.imageUrls.first, fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const Icon(Icons.image_outlined,
+                          errorBuilder: (_, _, _) => const Icon(Icons.image_outlined,
                             color: TradeLinkColors.outlineVariant, size: 32))
                       : const Icon(Icons.image_outlined,
                           color: TradeLinkColors.outlineVariant, size: 32),

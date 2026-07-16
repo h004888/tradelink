@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/ui_state.dart';
@@ -119,7 +118,7 @@ class _Body extends StatelessWidget {
                 _StatDivider(),
                 _StatItem(label: 'Tỷ lệ HT', value: '${profile.successRate.toStringAsFixed(0)}%'),
                 _StatDivider(),
-                _StatItem(label: 'Đánh giá', value: '${profile.rating.toStringAsFixed(1)}'),
+                _StatItem(label: 'Đánh giá', value: profile.rating.toStringAsFixed(1)),
               ],
             ),
           ),
@@ -185,7 +184,7 @@ class _Body extends StatelessWidget {
                         ? Image.network(
                             listing.imageUrl!,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
+                            errorBuilder: (_, _, _) => Container(
                               color: TradeLinkColors.surfaceContainerHigh,
                               alignment: Alignment.center,
                               child: const Icon(Icons.image_outlined,

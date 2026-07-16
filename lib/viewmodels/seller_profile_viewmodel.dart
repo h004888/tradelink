@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/result.dart';
 import '../../core/ui_state.dart';
-import '../../models/listing_model.dart';
 import '../../models/seller_profile_model.dart';
 import '../../repositories/profile_repository.dart';
 import '../../utils/constants.dart';

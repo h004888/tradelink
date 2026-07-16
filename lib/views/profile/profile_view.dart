@@ -1,4 +1,3 @@
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -91,7 +90,7 @@ class _ProfileBody extends StatelessWidget {
                       width: 96,
                       height: 96,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const Icon(
+                      errorBuilder: (_, _, _) => const Icon(
                         Icons.person_outline,
                         size: 48,
                         color: TradeLinkColors.onSurfaceVariant,

@@ -8,7 +8,6 @@ import '../../utils/theme.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/tradelink_app_bar.dart';
 import '../../widgets/tradelink_card.dart';
-import '../../widgets/tradelink_text.dart';
 
 class AdminTransactionsView extends StatelessWidget {
   const AdminTransactionsView({super.key});
@@ -79,7 +78,7 @@ class _Body extends StatelessWidget {
         Success(:final data) => ListView.separated(
             padding: const EdgeInsets.all(TradeLinkSpacing.marginMobile),
             itemCount: data.length,
-            separatorBuilder: (_, __) =>
+            separatorBuilder: (_, _) =>
                 const SizedBox(height: TradeLinkSpacing.sm),
             itemBuilder: (_, i) {
               final t = data[i];

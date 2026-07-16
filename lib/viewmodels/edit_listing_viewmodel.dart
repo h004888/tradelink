@@ -31,9 +31,22 @@ class EditListingViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void updateField(void Function(Listing) update) { update(_listing); notifyListeners(); }
+  void updateField(Listing Function(Listing) update) { _listing = update(_listing); notifyListeners(); }
 
   Future<bool> save() async {
+    if (_listing.title.isEmpty || _listing.description.isEmpty) {
+      _saveState = const Error(message: 'Tiêu đề và mô tả không được để trống'); notifyListeners(); return false;
+    }
+    if (_listing.type == ListingType.sale && _listing.price == null) {
+      _saveState = const Error(message: 'Vui lòng nhập giá bán'); notifyListeners(); return false;
+    }
+    if (_listing.type == ListingType.trade && (_listing.exchangeFor == null || _listing.exchangeFor!.isEmpty)) {
+      _saveState = const Error(message: 'Vui lòng mô tả món đồ bạn muốn đổi'); notifyListeners(); return false;
+    }
+    if (_listing.type == ListingType.both && (_listing.price == null || _listing.exchangeFor == null || _listing.exchangeFor!.isEmpty)) {
+      _saveState = const Error(message: 'Vui lòng nhập giá bán và mô tả món đồ muốn đổi'); notifyListeners(); return false;
+    }
+
     _saveState = const Loading(); notifyListeners();
     final result = await _repository.updateListing(_listing);
     switch (result) {

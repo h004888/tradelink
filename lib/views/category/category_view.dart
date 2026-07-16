@@ -8,7 +8,6 @@ import '../../viewmodels/category_viewmodel.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_skeleton.dart';
 import '../../widgets/tradelink_app_bar.dart';
-import '../../widgets/tradelink_text.dart';
 
 class CategoryView extends StatelessWidget {
   final String categoryId;
@@ -97,7 +96,7 @@ class _Body extends StatelessWidget {
                       ? Image.network(
                           item.imageUrls.first,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const Icon(
+                          errorBuilder: (_, _, _) => const Icon(
                             Icons.image_outlined,
                             color: TradeLinkColors.outlineVariant,
                           ),

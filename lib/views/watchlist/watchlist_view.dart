@@ -9,7 +9,6 @@ import '../../widgets/empty_state.dart';
 import '../../widgets/loading_skeleton.dart';
 import '../../widgets/tradelink_app_bar.dart';
 import '../../widgets/tradelink_card.dart';
-import '../../widgets/tradelink_text.dart';
 
 class WatchlistView extends StatelessWidget {
   const WatchlistView({super.key});

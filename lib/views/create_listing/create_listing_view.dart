@@ -152,6 +152,7 @@ class _CreateListingBody extends StatelessWidget {
                   hintText: 'VD: Đổi lấy Samsung S24 Ultra',
                 ),
                 maxLines: 2,
+                onChanged: vm.setExchangeFor,
               ),
               const SizedBox(height: TradeLinkSpacing.md),
             ],
@@ -166,7 +167,7 @@ class _CreateListingBody extends StatelessWidget {
             ),
             const SizedBox(height: TradeLinkSpacing.md),
             DropdownButtonFormField<String>(
-              value: vm.category,
+              initialValue: vm.category,
               decoration: const InputDecoration(labelText: 'Danh mục'),
               items: CreateListingViewModel.categories
                   .map((c) => DropdownMenuItem(value: c, child: Text(c)))
@@ -344,7 +345,7 @@ class _ImageThumb extends StatelessWidget {
         fit: BoxFit.cover,
         width: 100,
         height: 100,
-        errorBuilder: (_, __, ___) => Container(
+        errorBuilder: (_, _, _) => Container(
           width: 100,
           height: 100,
           color: TradeLinkColors.surfaceContainer,
