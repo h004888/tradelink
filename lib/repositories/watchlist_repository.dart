@@ -1,5 +1,4 @@
 import '../core/api_client.dart';
-import '../core/failure.dart';
 import '../core/result.dart';
 import '../models/listing_model.dart';
 
@@ -64,7 +63,7 @@ class WatchlistRepository {
     return switch (res) {
       ResultSuccess(data: final d) => ResultSuccess<List<Listing>>(
           ((d['data'] as List?) ?? [])
-              .map((e) => _fromListingJson(((e as Map<String, dynamic>)['listingId'] as Map<String, dynamic>? ?? {}) as Map<String, dynamic>))
+              .map((e) => _fromListingJson(((e as Map<String, dynamic>)['listingId'] as Map<String, dynamic>? ?? {})))
               .toList(),
         ),
       FailureResult(failure: final f) => FailureResult<List<Listing>>(f),

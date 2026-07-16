@@ -1,4 +1,3 @@
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -13,7 +12,6 @@ import '../../widgets/status_badge.dart';
 import '../../widgets/tradelink_app_bar.dart';
 import '../../widgets/tradelink_button.dart';
 import '../../widgets/tradelink_card.dart';
-import '../../widgets/tradelink_text.dart';
 
 class ListingDetailView extends StatelessWidget {
   final String listingId;
@@ -153,6 +151,27 @@ class _Body extends StatelessWidget {
                 const SizedBox(height: TradeLinkSpacing.md),
                 const Divider(height: 1, color: TradeLinkColors.cardDivider),
                 const SizedBox(height: TradeLinkSpacing.md),
+
+                if (l.type != ListingType.sale && l.exchangeFor != null && l.exchangeFor!.isNotEmpty) ...[
+                  Text(
+                    'Muốn đổi lấy',
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: TradeLinkColors.tradeTeal,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: TradeLinkSpacing.xs),
+                  Text(
+                    l.exchangeFor!,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: TradeLinkColors.onSurface,
+                      height: 1.6,
+                    ),
+                  ),
+                  const SizedBox(height: TradeLinkSpacing.md),
+                  const Divider(height: 1, color: TradeLinkColors.cardDivider),
+                  const SizedBox(height: TradeLinkSpacing.md),
+                ],
 
                 // Description
                 Text(

@@ -12,6 +12,7 @@ class Listing {
   final String description;
   final double? price;
   final List<String> imageUrls;
+  final String? exchangeFor;
   final String category;
   final String? categoryName;
   final String? categoryId;
@@ -33,6 +34,7 @@ class Listing {
     required this.title,
     required this.description,
     this.price,
+    this.exchangeFor,
     this.imageUrls = const [],
     required this.category,
     this.categoryName,
@@ -55,6 +57,7 @@ class Listing {
     String? title,
     String? description,
     double? price,
+    String? exchangeFor,
     List<String>? imageUrls,
     String? category,
     String? categoryName,
@@ -72,10 +75,11 @@ class Listing {
       title: title ?? this.title,
       description: description ?? this.description,
       price: price ?? this.price,
+      exchangeFor: exchangeFor ?? this.exchangeFor,
       imageUrls: imageUrls ?? this.imageUrls,
       category: category ?? this.category,
       categoryName: categoryName ?? this.categoryName,
-      categoryId: categoryId ?? this.categoryId,
+      categoryId: categoryId ?? categoryId,
       condition: condition ?? this.condition,
       type: type ?? this.type,
       status: status ?? this.status,
@@ -86,7 +90,7 @@ class Listing {
       interests: interests ?? this.interests,
       saves: saves ?? this.saves,
       createdAt: createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
+      updatedAt: updatedAt ?? updatedAt,
       boostExpiry: boostExpiry ?? this.boostExpiry,
     );
   }
@@ -100,7 +104,15 @@ class Listing {
     if (title.isNotEmpty) filled++;
     if (description.isNotEmpty) filled++;
     if (imageUrls.isNotEmpty) filled++;
-    if (price != null || type != ListingType.sale) filled++;
+    
+    bool hasPrice = price != null;
+    bool hasExchange = exchangeFor != null && exchangeFor!.isNotEmpty;
+    if ((type == ListingType.sale && hasPrice) || 
+        (type == ListingType.trade && hasExchange) ||
+        (type == ListingType.both && hasPrice && hasExchange)) {
+      filled++;
+    }
+    
     if (category.isNotEmpty) filled++;
     return (filled / 5 * 100).round();
   }

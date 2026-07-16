@@ -66,8 +66,8 @@ class ChatRepository {
       return ChatConversation(
         id: j['_id'] as String? ?? j['id'] as String? ?? '',
         messages: const [],
-        otherUserName: participants.isNotEmpty ? participants.first['name'] as String? : null,
-        otherUserId: participants.isNotEmpty ? participants.first['id'] as String? : null,
+        otherUserName: participants.isNotEmpty ? participants.first['name'] : null,
+        otherUserId: participants.isNotEmpty ? participants.first['id'] : null,
         listingId: j['listingId']?.toString(),
       );
     }).toList();

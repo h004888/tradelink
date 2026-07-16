@@ -1,5 +1,4 @@
 import '../core/api_client.dart';
-import '../core/failure.dart';
 import '../core/result.dart';
 import '../models/offer_model.dart';
 

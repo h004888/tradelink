@@ -9,7 +9,6 @@ import '../../viewmodels/boost_listing_viewmodel.dart';
 import '../../widgets/tradelink_app_bar.dart';
 import '../../widgets/tradelink_button.dart';
 import '../../widgets/tradelink_card.dart';
-import '../../widgets/tradelink_text.dart';
 
 class BoostListingView extends StatelessWidget {
   final String listingId;

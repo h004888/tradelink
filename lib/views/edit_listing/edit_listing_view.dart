@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/ui_state.dart';
+import '../../models/listing_model.dart';
 import '../../utils/theme.dart';
 import '../../viewmodels/edit_listing_viewmodel.dart';
 import '../../widgets/empty_state.dart';
@@ -107,6 +108,16 @@ class _Body extends StatelessWidget {
                     },
                   ),
                 const SizedBox(height: TradeLinkSpacing.md),
+                if (vm.listing.type != ListingType.sale) ...[
+                  TextField(
+                    controller: TextEditingController(text: vm.listing.exchangeFor ?? ''),
+                    style: theme.textTheme.bodyLarge,
+                    decoration: const InputDecoration(labelText: 'Mô tả món đồ muốn đổi lấy'),
+                    maxLines: 2,
+                    onChanged: (v) => vm.updateField((l) => l.copyWith(exchangeFor: v)),
+                  ),
+                  const SizedBox(height: TradeLinkSpacing.md),
+                ],
                 TextField(
                   controller:
                       TextEditingController(text: vm.listing.description),

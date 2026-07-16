@@ -13,7 +13,6 @@ import '../../widgets/active_transaction_card.dart';
 import '../../widgets/category_horizontal_list.dart';
 import '../../widgets/home_search_bar.dart';
 import '../../widgets/safe_transaction_banner.dart';
-import '../../widgets/tradelink_text.dart';
 
 class HomeView extends StatelessWidget {
   const HomeView({super.key});
@@ -414,7 +413,7 @@ class _HomeBodyState extends State<_HomeBody> {
                       ? Image.network(
                           item.imageUrls.first,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
+                          errorBuilder: (_, _, _) => Container(
                             color: TradeLinkColors.surfaceContainerHigh,
                             alignment: Alignment.center,
                             child: const Icon(Icons.image_outlined,
@@ -475,7 +474,7 @@ class _HomeBodyState extends State<_HomeBody> {
   Widget _buildFeedSkeleton() {
     return SliverList(
       delegate: SliverChildBuilderDelegate(
-        (_, __) => Padding(
+        (_, _) => Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           child: Container(
             height: 260,

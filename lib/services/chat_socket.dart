@@ -70,7 +70,7 @@ class ChatSocket {
         'conversationId': conversationId,
         'text': text,
         'isOffer': isOffer,
-        if (offerListingId != null) 'offerListingId': offerListingId,
+        'offerListingId': ?offerListingId,
       },
       ack: (ack) {
         final ok = ack is Map && ack['success'] == true;
@@ -81,7 +81,9 @@ class ChatSocket {
   }
 
   void dispose() {
-    _controllers.values.forEach((c) => c.close());
+    for (var c in _controllers.values) {
+      c.close();
+    }
     _controllers.clear();
     _socket?.dispose();
     _socket = null;

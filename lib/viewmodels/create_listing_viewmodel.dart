@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/result.dart';
 import '../../core/ui_state.dart';
@@ -27,6 +29,8 @@ class CreateListingViewModel extends ChangeNotifier {
   String get description => _description;
   double? _price;
   double? get price => _price;
+  String? _exchangeFor;
+  String? get exchangeFor => _exchangeFor;
   String _category = 'Điện tử';
   String get category => _category;
   ItemCondition _condition = ItemCondition.used;
@@ -43,7 +47,15 @@ class CreateListingViewModel extends ChangeNotifier {
     if (_title.isNotEmpty) filled++;
     if (_description.isNotEmpty) filled++;
     if (_imageUrls.isNotEmpty) filled++;
-    if (_price != null || _type != ListingType.sale) filled++;
+    
+    bool hasPrice = _price != null;
+    bool hasExchange = _exchangeFor != null && _exchangeFor!.isNotEmpty;
+    if ((_type == ListingType.sale && hasPrice) || 
+        (_type == ListingType.trade && hasExchange) ||
+        (_type == ListingType.both && hasPrice && hasExchange)) {
+      filled++;
+    }
+    
     if (_category.isNotEmpty) filled++;
     return (filled / 5 * 100).round();
   }
@@ -52,6 +64,7 @@ class CreateListingViewModel extends ChangeNotifier {
   void setTitle(String v) { _title = v; }
   void setDescription(String v) { _description = v; }
   void setPrice(String v) { _price = double.tryParse(v); }
+  void setExchangeFor(String v) { _exchangeFor = v; }
   void setCategory(String v) { _category = v; notifyListeners(); }
   void setCondition(ItemCondition c) { _condition = c; notifyListeners(); }
 
@@ -99,6 +112,28 @@ class CreateListingViewModel extends ChangeNotifier {
   }
 
   Future<bool> publish() async {
+    if (_title.isEmpty || _description.isEmpty || _imageUrls.isEmpty) {
+      _state = const Error(message: 'Vui lòng điền tiêu đề, mô tả và tải lên ít nhất 1 ảnh', retryable: false);
+      notifyListeners();
+      return false;
+    }
+    
+    if (_type == ListingType.sale && _price == null) {
+      _state = const Error(message: 'Vui lòng nhập giá bán', retryable: false);
+      notifyListeners();
+      return false;
+    }
+    if (_type == ListingType.trade && (_exchangeFor == null || _exchangeFor!.isEmpty)) {
+      _state = const Error(message: 'Vui lòng mô tả món đồ bạn muốn đổi', retryable: false);
+      notifyListeners();
+      return false;
+    }
+    if (_type == ListingType.both && (_price == null || _exchangeFor == null || _exchangeFor!.isEmpty)) {
+      _state = const Error(message: 'Vui lòng nhập giá bán và mô tả món đồ muốn đổi', retryable: false);
+      notifyListeners();
+      return false;
+    }
+
     _state = const Loading();
     notifyListeners();
 
@@ -107,6 +142,7 @@ class CreateListingViewModel extends ChangeNotifier {
       title: _title,
       description: _description,
       price: _price,
+      exchangeFor: _exchangeFor,
       imageUrls: _imageUrls,
       category: _category,
       condition: _condition,
@@ -131,6 +167,25 @@ class CreateListingViewModel extends ChangeNotifier {
   }
 
   Future<void> saveDraft() async {
+    final prefs = await SharedPreferences.getInstance();
+    final draftList = prefs.getStringList('draft_listings') ?? [];
+    
+    final draft = {
+      'id': 'draft-${DateTime.now().millisecondsSinceEpoch}',
+      'title': _title,
+      'description': _description,
+      'price': _price,
+      'exchangeFor': _exchangeFor,
+      'imageUrls': _imageUrls,
+      'category': _category,
+      'condition': _condition.name,
+      'type': _type.name,
+      'createdAt': DateTime.now().toIso8601String(),
+    };
+    
+    draftList.add(jsonEncode(draft));
+    await prefs.setStringList('draft_listings', draftList);
+    
     _state = const Idle();
     notifyListeners();
   }
