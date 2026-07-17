@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import '../core/api_client.dart';
@@ -13,20 +13,22 @@ class UploadRepository {
   final ApiClient _api = ApiClient.instance;
 
   /// Upload 1 ảnh — trả về URL public đã host trên backend.
-  Future<Result<String>> uploadOne(File file) async {
+  Future<Result<String>> uploadOne(XFile file) async {
     final token = _api.getToken();
     if (token == null) {
       return FailureResult(AuthFailure(message: 'Chưa đăng nhập để upload ảnh'));
     }
     try {
       final uri = Uri.parse('$baseUrl/upload/image');
+      final bytes = await file.readAsBytes();
       final req = http.MultipartRequest('POST', uri)
         ..headers['Authorization'] = 'Bearer $token'
         ..files.add(
-          await http.MultipartFile.fromPath(
+          http.MultipartFile.fromBytes(
             'image',
-            file.path,
-            contentType: _guessContentType(file.path),
+            bytes,
+            filename: file.name,
+            contentType: _guessContentType(file.name),
           ),
         );
       final streamed = await req.send().timeout(AppConfig.timeout);
@@ -38,7 +40,7 @@ class UploadRepository {
   }
 
   /// Upload nhiều ảnh cùng lúc.
-  Future<Result<List<String>>> uploadMany(List<File> files) async {
+  Future<Result<List<String>>> uploadMany(List<XFile> files) async {
     if (files.isEmpty) return ResultSuccess<List<String>>(const []);
     final token = _api.getToken();
     if (token == null) {
@@ -49,11 +51,13 @@ class UploadRepository {
       final req = http.MultipartRequest('POST', uri)
         ..headers['Authorization'] = 'Bearer $token';
       for (final f in files) {
+        final bytes = await f.readAsBytes();
         req.files.add(
-          await http.MultipartFile.fromPath(
+          http.MultipartFile.fromBytes(
             'images',
-            f.path,
-            contentType: _guessContentType(f.path),
+            bytes,
+            filename: f.name,
+            contentType: _guessContentType(f.name),
           ),
         );
       }

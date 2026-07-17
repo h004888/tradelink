@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import '../core/api_client.dart';
@@ -64,7 +64,7 @@ class ProfileRepository {
 
   /// Upload avatar multipart tới PUT /users/:id/avatar.
   /// Trả về Profile đã cập nhật (có avatarUrl mới).
-  Future<Result<Profile>> uploadAvatar(String userId, File file) async {
+  Future<Result<Profile>> uploadAvatar(String userId, XFile file) async {
     final token = _api.getToken();
     if (token == null) {
       return FailureResult(AuthFailure(message: 'Chưa đăng nhập'));
@@ -77,9 +77,10 @@ class ProfileRepository {
         'webp' => MediaType('image', 'webp'),
         _ => MediaType('image', 'jpeg'),
       };
+      final bytes = await file.readAsBytes();
       final req = http.MultipartRequest('PUT', uri)
         ..headers['Authorization'] = 'Bearer $token'
-        ..files.add(await http.MultipartFile.fromPath('image', file.path, contentType: contentType));
+        ..files.add(http.MultipartFile.fromBytes('image', bytes, filename: file.name, contentType: contentType));
       final streamed = await req.send().timeout(AppConfig.timeout);
       final res = await http.Response.fromStream(streamed);
       final body = _decode(res.body);

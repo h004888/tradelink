@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/result.dart';
@@ -68,13 +67,12 @@ class EditProfileViewModel extends ChangeNotifier {
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: source, maxWidth: 800, maxHeight: 800, imageQuality: 85);
     if (picked == null) return false;
-    final file = File(picked.path);
     final s = _loadState;
     if (s is! Success<Profile>) return false;
     final userId = s.data.id;
     _avatarState = const Loading();
     notifyListeners();
-    final res = await _repository.uploadAvatar(userId, file);
+    final res = await _repository.uploadAvatar(userId, picked);
     if (res is ResultSuccess<Profile>) {
       _avatarUrl = res.data.avatarUrl;
       _loadState = Success(res.data);

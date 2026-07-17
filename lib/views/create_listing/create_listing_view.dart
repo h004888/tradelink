@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
@@ -89,8 +90,16 @@ class _CreateListingBody extends StatelessWidget {
               'Hình ảnh (tối đa 8 ảnh)',
               style: theme.textTheme.labelLarge?.copyWith(
                 fontWeight: FontWeight.w600,
+                color: vm.imageError != null ? theme.colorScheme.error : null,
               ),
             ),
+            if (vm.imageError != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                vm.imageError!,
+                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error),
+              ),
+            ],
             const SizedBox(height: TradeLinkSpacing.xs),
             _ImagePickerGrid(vm: vm),
 
@@ -125,9 +134,10 @@ class _CreateListingBody extends StatelessWidget {
             const SizedBox(height: TradeLinkSpacing.lg),
             TextField(
               style: theme.textTheme.bodyLarge,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Tiêu đề',
                 hintText: 'VD: iPhone 15 Pro Max 256GB',
+                errorText: vm.titleError,
               ),
               onChanged: vm.setTitle,
             ),
@@ -135,10 +145,11 @@ class _CreateListingBody extends StatelessWidget {
             if (vm.type != ListingType.trade) ...[
               TextField(
                 style: theme.textTheme.bodyLarge,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Giá bán (VNĐ)',
                   hintText: 'VD: 45000000',
-                  prefixIcon: Icon(Icons.monetization_on_outlined),
+                  prefixIcon: const Icon(Icons.monetization_on_outlined),
+                  errorText: vm.priceError,
                 ),
                 keyboardType: TextInputType.number,
                 onChanged: vm.setPrice,
@@ -147,9 +158,10 @@ class _CreateListingBody extends StatelessWidget {
             ],
             if (vm.type != ListingType.sale) ...[
               TextField(
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Mô tả món đồ muốn đổi lấy',
                   hintText: 'VD: Đổi lấy Samsung S24 Ultra',
+                  errorText: vm.exchangeForError,
                 ),
                 maxLines: 2,
                 onChanged: vm.setExchangeFor,
@@ -158,9 +170,10 @@ class _CreateListingBody extends StatelessWidget {
             ],
             TextField(
               style: theme.textTheme.bodyLarge,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Mô tả chi tiết',
                 hintText: 'Mô tả tình trạng, phụ kiện đi kèm...',
+                errorText: vm.descriptionError,
               ),
               maxLines: 4,
               onChanged: vm.setDescription,
@@ -329,7 +342,7 @@ class _ImagePickerGrid extends StatelessWidget {
 }
 
 class _ImageThumb extends StatelessWidget {
-  final File? file;
+  final XFile? file;
   final String? url;
   final VoidCallback onDelete;
   const _ImageThumb({this.file, this.url, required this.onDelete});
@@ -338,7 +351,11 @@ class _ImageThumb extends StatelessWidget {
   Widget build(BuildContext context) {
     Widget img;
     if (file != null) {
-      img = Image.file(file!, fit: BoxFit.cover, width: 100, height: 100);
+      if (kIsWeb) {
+        img = Image.network(file!.path, fit: BoxFit.cover, width: 100, height: 100);
+      } else {
+        img = Image.file(File(file!.path), fit: BoxFit.cover, width: 100, height: 100);
+      }
     } else if (url != null) {
       img = Image.network(
         url!,

@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
@@ -25,20 +24,33 @@ class CreateListingViewModel extends ChangeNotifier {
   ListingType get type => _type;
   String _title = '';
   String get title => _title;
+  String? _titleError;
+  String? get titleError => _titleError;
+
   String _description = '';
   String get description => _description;
+  String? _descriptionError;
+  String? get descriptionError => _descriptionError;
+
   double? _price;
   double? get price => _price;
+  String? _priceError;
+  String? get priceError => _priceError;
+
   String? _exchangeFor;
   String? get exchangeFor => _exchangeFor;
+  String? _exchangeForError;
+  String? get exchangeForError => _exchangeForError;
   String _category = 'Điện tử';
   String get category => _category;
   ItemCondition _condition = ItemCondition.used;
   ItemCondition get condition => _condition;
   final List<String> _imageUrls = [];
   List<String> get imageUrls => _imageUrls;
-  final List<File> _localImages = [];
-  List<File> get localImages => _localImages;
+  final List<XFile> _localImages = [];
+  List<XFile> get localImages => _localImages;
+  String? _imageError;
+  String? get imageError => _imageError;
 
   static const List<String> categories = ['Điện tử', 'Điện thoại', 'Phụ kiện', 'Xe cộ', 'Nội thất', 'Thời trang', 'Sách', 'Khác'];
 
@@ -60,11 +72,11 @@ class CreateListingViewModel extends ChangeNotifier {
     return (filled / 5 * 100).round();
   }
 
-  void setType(ListingType t) { _type = t; notifyListeners(); }
-  void setTitle(String v) { _title = v; }
-  void setDescription(String v) { _description = v; }
-  void setPrice(String v) { _price = double.tryParse(v); }
-  void setExchangeFor(String v) { _exchangeFor = v; }
+  void setType(ListingType t) { _type = t; _priceError = null; _exchangeForError = null; notifyListeners(); }
+  void setTitle(String v) { _title = v; if (_titleError != null) { _titleError = null; notifyListeners(); } }
+  void setDescription(String v) { _description = v; if (_descriptionError != null) { _descriptionError = null; notifyListeners(); } }
+  void setPrice(String v) { _price = double.tryParse(v); if (_priceError != null) { _priceError = null; notifyListeners(); } }
+  void setExchangeFor(String v) { _exchangeFor = v; if (_exchangeForError != null) { _exchangeForError = null; notifyListeners(); } }
   void setCategory(String v) { _category = v; notifyListeners(); }
   void setCondition(ItemCondition c) { _condition = c; notifyListeners(); }
 
@@ -84,16 +96,16 @@ class CreateListingViewModel extends ChangeNotifier {
         imageQuality: 80,
       );
       if (picked == null) return;
-      final file = File(picked.path);
       _isUploading = true;
       notifyListeners();
-      final res = await _upload.uploadOne(file);
+      final res = await _upload.uploadOne(picked);
       _isUploading = false;
       if (res is FailureResult<String>) {
         _state = Error(message: (res).failure.message, retryable: true);
       } else {
         _imageUrls.add((res as ResultSuccess<String>).data);
-        _localImages.add(file);
+        _localImages.add(picked);
+        _imageError = null;
       }
     } catch (e) {
       _isUploading = false;
@@ -112,24 +124,21 @@ class CreateListingViewModel extends ChangeNotifier {
   }
 
   Future<bool> publish() async {
-    if (_title.isEmpty || _description.isEmpty || _imageUrls.isEmpty) {
-      _state = const Error(message: 'Vui lòng điền tiêu đề, mô tả và tải lên ít nhất 1 ảnh', retryable: false);
-      notifyListeners();
-      return false;
-    }
+    bool hasError = false;
     
-    if (_type == ListingType.sale && _price == null) {
-      _state = const Error(message: 'Vui lòng nhập giá bán', retryable: false);
-      notifyListeners();
-      return false;
-    }
-    if (_type == ListingType.trade && (_exchangeFor == null || _exchangeFor!.isEmpty)) {
-      _state = const Error(message: 'Vui lòng mô tả món đồ bạn muốn đổi', retryable: false);
-      notifyListeners();
-      return false;
-    }
-    if (_type == ListingType.both && (_price == null || _exchangeFor == null || _exchangeFor!.isEmpty)) {
-      _state = const Error(message: 'Vui lòng nhập giá bán và mô tả món đồ muốn đổi', retryable: false);
+    if (_title.isEmpty) { _titleError = 'Vui lòng nhập tiêu đề'; hasError = true; } else _titleError = null;
+    if (_description.isEmpty) { _descriptionError = 'Vui lòng nhập mô tả chi tiết'; hasError = true; } else _descriptionError = null;
+    if (_imageUrls.isEmpty) { _imageError = 'Vui lòng chọn ít nhất 1 ảnh'; hasError = true; } else _imageError = null;
+    
+    if (_type == ListingType.sale || _type == ListingType.both) {
+      if (_price == null) { _priceError = 'Vui lòng nhập giá bán'; hasError = true; } else _priceError = null;
+    } else _priceError = null;
+
+    if (_type == ListingType.trade || _type == ListingType.both) {
+      if (_exchangeFor == null || _exchangeFor!.isEmpty) { _exchangeForError = 'Vui lòng mô tả món đồ bạn muốn đổi'; hasError = true; } else _exchangeForError = null;
+    } else _exchangeForError = null;
+
+    if (hasError) {
       notifyListeners();
       return false;
     }

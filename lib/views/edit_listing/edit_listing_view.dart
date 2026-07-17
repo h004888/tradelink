@@ -87,7 +87,10 @@ class _Body extends StatelessWidget {
                 TextField(
                   controller: TextEditingController(text: vm.listing.title),
                   style: theme.textTheme.bodyLarge,
-                  decoration: const InputDecoration(labelText: 'Tiêu đề'),
+                  decoration: InputDecoration(
+                    labelText: 'Tiêu đề',
+                    errorText: vm.titleError,
+                  ),
                   onChanged: (v) =>
                       vm.updateField((l) => l.copyWith(title: v)),
                 ),
@@ -97,9 +100,10 @@ class _Body extends StatelessWidget {
                     controller:
                         TextEditingController(text: vm.listing.price?.toString()),
                     style: theme.textTheme.bodyLarge,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Giá (VNĐ)',
-                      prefixIcon: Icon(Icons.monetization_on_outlined),
+                      prefixIcon: const Icon(Icons.monetization_on_outlined),
+                      errorText: vm.priceError,
                     ),
                     keyboardType: TextInputType.number,
                     onChanged: (v) {
@@ -112,7 +116,10 @@ class _Body extends StatelessWidget {
                   TextField(
                     controller: TextEditingController(text: vm.listing.exchangeFor ?? ''),
                     style: theme.textTheme.bodyLarge,
-                    decoration: const InputDecoration(labelText: 'Mô tả món đồ muốn đổi lấy'),
+                    decoration: InputDecoration(
+                      labelText: 'Mô tả món đồ muốn đổi lấy',
+                      errorText: vm.exchangeForError,
+                    ),
                     maxLines: 2,
                     onChanged: (v) => vm.updateField((l) => l.copyWith(exchangeFor: v)),
                   ),
@@ -122,7 +129,10 @@ class _Body extends StatelessWidget {
                   controller:
                       TextEditingController(text: vm.listing.description),
                   style: theme.textTheme.bodyLarge,
-                  decoration: const InputDecoration(labelText: 'Mô tả'),
+                  decoration: InputDecoration(
+                    labelText: 'Mô tả',
+                    errorText: vm.descriptionError,
+                  ),
                   maxLines: 4,
                   onChanged: (v) =>
                       vm.updateField((l) => l.copyWith(description: v)),
