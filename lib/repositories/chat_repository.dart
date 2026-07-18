@@ -28,12 +28,20 @@ class ChatConversation {
   final String? otherUserId;
   final String? listingId;
 
+  /// Last message preview — dùng cho subtitle trong chat list
+  final String? lastMessage;
+
+  /// Thời gian cập nhật cuối — dùng cho sort/timestamp
+  final DateTime? updatedAt;
+
   const ChatConversation({
     required this.id,
     required this.messages,
     this.otherUserName,
     this.otherUserId,
     this.listingId,
+    this.lastMessage,
+    this.updatedAt,
   });
 }
 
@@ -57,18 +65,26 @@ class ChatRepository {
       return FailureResult<List<ChatConversation>>(res.failure);
     }
     final data = (res as ResultSuccess<Map<String, dynamic>>).data['data'] as List?;
+    final currentUserId = _api.getUserId();
     final list = (data ?? []).map((raw) {
       final j = raw as Map<String, dynamic>;
       final participants = (j['participants'] as List?)?.map((p) {
         if (p is Map) return {'id': p['_id']?.toString() ?? '', 'name': p['name']?.toString() ?? ''};
         return {'id': p.toString(), 'name': 'User'};
       }).toList() ?? [];
+      // Lọc ra người chat còn lại (không phải current user) — tránh hiển thị tên chính mình
+      final others = participants.where((p) => p['id'] != currentUserId).toList();
+      final other = others.isNotEmpty ? others.first : (participants.isNotEmpty ? participants.first : null);
       return ChatConversation(
         id: j['_id'] as String? ?? j['id'] as String? ?? '',
         messages: const [],
-        otherUserName: participants.isNotEmpty ? participants.first['name'] : null,
-        otherUserId: participants.isNotEmpty ? participants.first['id'] : null,
+        otherUserName: other?['name'],
+        otherUserId: other?['id'],
         listingId: j['listingId']?.toString(),
+        lastMessage: j['lastMessage'] as String?,
+        updatedAt: j['updatedAt'] != null
+            ? DateTime.tryParse(j['updatedAt'].toString())
+            : null,
       );
     }).toList();
     return ResultSuccess<List<ChatConversation>>(list);
@@ -101,12 +117,6 @@ class ChatRepository {
 
   // E4 — auto-create conversation (or get existing)
   Future<Result<String>> getOrCreateConversation(String otherUserId, {String? listingId}) async {
-    // Vì backend route conversations không có endpoint này trực tiếp,
-    // gọi /auth/me cho buyer + buyer hiện tại sẽ tự tạo khi send message.
-    // Đơn giản: gọi 1 endpoint scan user khác, lấy conversation.
-    // Tạm thời: trả về 1 conversationId giả, buyer sẽ create khi sendMessage đầu tiên.
-    // Backend chat.service.ts:sendMessage chỉ update Conversation.findByIdAndUpdate
-    // → chưa có auto-create. Cần backend hook.
     final res = await _api.post('/conversations/init', body: {'otherUserId': otherUserId, 'listingId': listingId});
     if (res is FailureResult<Map<String, dynamic>>) {
       return FailureResult<String>(res.failure);

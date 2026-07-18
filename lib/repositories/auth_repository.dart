@@ -1,6 +1,7 @@
 import '../core/api_client.dart';
 import '../core/failure.dart';
 import '../core/result.dart';
+import '../services/chat_socket.dart';
 
 class AuthRepository {
   final _api = ApiClient.instance;
@@ -53,6 +54,9 @@ class AuthRepository {
   Future<void> logout() async {
     await _api.post('/auth/logout');
     await _api.clearTokens();
+    // Dispose chat socket để ngắt kết nối realtime với token cũ,
+    // đảm bảo user mới login sẽ reconnect với token mới.
+    ChatSocket.instance.dispose();
   }
 
   /// Đổi mật khẩu — backend yêu cầu Bearer token, verify mật khẩu cũ và hash mật khẩu mới.

@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import '../core/api_client.dart';
+import '../core/app_config.dart';
 import '../repositories/chat_repository.dart';
 
 /// Service kết nối socket.io tới backend chat realtime.
@@ -18,21 +20,38 @@ class ChatSocket {
     if (_socket != null) return;
     final token = ApiClient.instance.getToken();
     if (token == null) return;
+    // Strip /api/v1 suffix — socket.io connects to server root, not API path
+    final baseUrl = AppConfig.baseUrl.replaceFirst('/api/v1', '');
     _socket = IO.io(
-      'http://localhost:3000',
+      baseUrl,
       IO.OptionBuilder()
-          .setTransports(['websocket'])
+          // Cho phép cả websocket và polling — Android emulator thường cần polling fallback
+          .setTransports(['websocket', 'polling'])
           .setAuth({'token': token})
           .enableReconnection()
+          // Tăng timeout để Android emulator có đủ thời gian connect
+          .setReconnectionDelay(2000)
+          .setReconnectionDelayMax(10000)
           .build(),
     );
     _socket!.onConnect((_) {
+      debugPrint('[ChatSocket] connected');
       // re-join tất cả conversations đang theo dõi
       for (final cid in _controllers.keys) {
         _socket!.emit('join', cid);
       }
     });
+    _socket!.onDisconnect((reason) {
+      debugPrint('[ChatSocket] disconnected: $reason');
+    });
+    _socket!.onConnectError((err) {
+      debugPrint('[ChatSocket] connect_error: $err');
+    });
+    _socket!.onError((err) {
+      debugPrint('[ChatSocket] error: $err');
+    });
     _socket!.on('message:new', (data) {
+      debugPrint('[ChatSocket] message:new received');
       if (data is! Map) return;
       final convId = data['conversationId']?.toString();
       if (convId == null) return;
@@ -70,7 +89,7 @@ class ChatSocket {
         'conversationId': conversationId,
         'text': text,
         'isOffer': isOffer,
-        'offerListingId': ?offerListingId,
+        'offerListingId': offerListingId,
       },
       ack: (ack) {
         final ok = ack is Map && ack['success'] == true;

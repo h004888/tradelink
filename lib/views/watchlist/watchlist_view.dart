@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -52,32 +53,40 @@ class _WatchlistBody extends StatelessWidget {
               crossAxisCount: 2,
               crossAxisSpacing: TradeLinkSpacing.sm,
               mainAxisSpacing: TradeLinkSpacing.sm,
-              childAspectRatio: 0.72,
+              // Aspect ratio 0.65 — content gồm: image vuông (158px) +
+              // 2 dòng title (~36px) + xs gap (4) + price compact (~20) +
+              // padding 16 = ~234px. Card height = 158/0.65 = 243 → margin 9px
+              // Fix "BOTTOM OVERFLOWED BY 37 PIXELS" (overflow 37px với 0.78)
+              childAspectRatio: 0.65,
             ),
             itemCount: vm.items.length,
             itemBuilder: (_, i) {
               final item = vm.items[i];
               return TradeLinkCard(
-                onTap: () =>
-                    context.push('${AppPaths.itemDetail}/${item.id}'),
+                // Click từ watchlist (BUYER) → navigate tới ItemDetailView
+                // (top-level route, có sẵn logic check `isCurrentUserSeller`:
+                // - Seller → "Quản lý tin đăng"
+                // - Buyer → "Mua an toàn" / "Gửi offer" / "Nhắn người bán")
+                //
+                // Dùng `context.go` thay vì `context.push` để tránh key collision
+                onTap: item.id.isEmpty
+                    ? null
+                    : () => context.go('${AppPaths.itemDetail}/${item.id}'),
                 padding: EdgeInsets.zero,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     AspectRatio(
                       aspectRatio: 1.0,
-                      child: Container(
-                        decoration: const BoxDecoration(
-                          color: TradeLinkColors.surfaceContainerHigh,
-                          borderRadius: BorderRadius.vertical(
-                            top: Radius.circular(TradeLinkRadii.lg),
-                          ),
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(TradeLinkRadii.lg),
                         ),
-                        alignment: Alignment.center,
-                        child: const Icon(
-                          Icons.image_outlined,
-                          size: 40,
-                          color: TradeLinkColors.outlineVariant,
+                        child: _WatchlistImage(
+                          url: item.imageUrls.isNotEmpty
+                              ? item.imageUrls.first
+                              : null,
                         ),
                       ),
                     ),
@@ -85,9 +94,10 @@ class _WatchlistBody extends StatelessWidget {
                       padding: const EdgeInsets.all(TradeLinkSpacing.sm),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            item.title,
+                            item.title.isEmpty ? 'Đang tải...' : item.title,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -109,6 +119,45 @@ class _WatchlistBody extends StatelessWidget {
               );
             },
           ),
+    );
+  }
+}
+
+/// Widget load ảnh từ URL với placeholder + error fallback
+class _WatchlistImage extends StatelessWidget {
+  final String? url;
+  const _WatchlistImage({required this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    if (url == null || url!.isEmpty) {
+      return Container(
+        color: TradeLinkColors.surfaceContainerHigh,
+        alignment: Alignment.center,
+        child: const Icon(
+          Icons.image_outlined,
+          size: 40,
+          color: TradeLinkColors.outlineVariant,
+        ),
+      );
+    }
+    return CachedNetworkImage(
+      imageUrl: url!,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
+      placeholder: (_, _) => Container(
+        color: TradeLinkColors.surfaceContainerHigh,
+      ),
+      errorWidget: (_, _, _) => Container(
+        color: TradeLinkColors.surfaceContainerHigh,
+        alignment: Alignment.center,
+        child: const Icon(
+          Icons.broken_image_outlined,
+          size: 32,
+          color: TradeLinkColors.outlineVariant,
+        ),
+      ),
     );
   }
 }

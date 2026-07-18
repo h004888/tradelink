@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../core/result.dart';
 import '../../core/ui_state.dart';
@@ -18,7 +19,12 @@ class ChatViewModel extends ChangeNotifier {
   bool _sendAsOffer = false;
   bool get sendAsOffer => _sendAsOffer;
 
+  /// Trạng thái gửi: đang gửi / lỗi
+  UiState<void> _sendState = const Idle();
+  UiState<void> get sendState => _sendState;
+
   StreamSubscription<ChatMessage>? _socketSub;
+  bool _disposed = false;
 
   ChatViewModel({required this.conversationId, this.offerListingId}) {
     load();
@@ -28,7 +34,8 @@ class ChatViewModel extends ChangeNotifier {
   void _subscribeRealtime() {
     _socketSub?.cancel();
     _socketSub = _socket.watch(conversationId).listen((msg) {
-      // Bỏ qua duplicate (khi mình tự gửi, server cũng broadcast về mình)
+      if (_disposed) return;
+      // Dedup theo id (server broadcast về cả sender)
       final exists = _messages.any((m) => m.id == msg.id && msg.id.isNotEmpty);
       if (exists) return;
       _messages.add(msg);
@@ -38,15 +45,16 @@ class ChatViewModel extends ChangeNotifier {
   }
 
   void toggleSendAsOffer() {
-    if (offerListingId == null) return;
+    if (offerListingId == null || _disposed) return;
     _sendAsOffer = !_sendAsOffer;
     notifyListeners();
   }
 
   Future<void> load() async {
     _state = const Loading();
-    notifyListeners();
+    if (!_disposed) notifyListeners();
     final result = await _repository.getMessages(conversationId);
+    if (_disposed) return;
     if (result is ResultSuccess<List<ChatMessage>>) {
       _messages
         ..clear()
@@ -55,44 +63,56 @@ class ChatViewModel extends ChangeNotifier {
     } else if (result is FailureResult<List<ChatMessage>>) {
       _state = Error(message: result.failure.message, retryable: true);
     }
-    notifyListeners();
+    if (!_disposed) notifyListeners();
   }
 
+  /// Gửi message — HTTP là primary path (reliable), socket là bonus để broadcast nhanh hơn.
+  /// Sau khi HTTP trả về 201, message được thêm vào local list NGAY để UX mượt.
   Future<bool> sendMessage(String text) async {
     if (text.isEmpty) return false;
-    // Thử gửi qua socket realtime trước
-    final ok = await _socket.sendRealtime(
-      conversationId,
-      text,
-      isOffer: _sendAsOffer,
-      offerListingId: _sendAsOffer ? offerListingId : null,
-    );
-    if (ok) {
-      _sendAsOffer = false;
-      notifyListeners();
-      return true;
-    }
-    // Fallback HTTP nếu socket lỗi
+    final isOffer = _sendAsOffer;
+    final offerId = isOffer ? offerListingId : null;
+
+    _sendState = const Loading();
+    if (!_disposed) notifyListeners();
+
+    // Gọi HTTP POST /conversations/:id/messages (luôn dùng — đảm bảo message được lưu)
     final result = await _repository.sendMessage(
       conversationId,
       text,
-      isOffer: _sendAsOffer,
-      offerListingId: _sendAsOffer ? offerListingId : null,
+      isOffer: isOffer,
+      offerListingId: offerId,
     );
+
+    if (_disposed) return false;
+
     if (result is ResultSuccess<ChatMessage>) {
-      final exists = _messages.any((m) => m.id == result.data.id && result.data.id.isNotEmpty);
-      if (!exists) _messages.add(result.data);
-      _state = Success(List.from(_messages));
+      // Thêm vào local list NGAY (dedup theo id)
+      final msg = result.data;
+      final exists = _messages.any((m) => m.id == msg.id && msg.id.isNotEmpty);
+      if (!exists) {
+        _messages.add(msg);
+        _state = Success(List.from(_messages));
+      }
       _sendAsOffer = false;
-    } else if (result is FailureResult<ChatMessage>) {
-      _state = Error(message: result.failure.message, retryable: true);
+      _sendState = const Success(null);
+      notifyListeners();
+      debugPrint('[ChatViewModel] sent OK: ${msg.id}');
+      return true;
     }
-    notifyListeners();
-    return result is ResultSuccess<ChatMessage>;
+
+    // HTTP fail — set error state để UI hiển thị
+    final failure = (result as FailureResult<ChatMessage>).failure;
+    debugPrint('[ChatViewModel] send FAIL: ${failure.message}');
+    _sendState = Error(message: failure.message, retryable: true);
+    _state = Error(message: failure.message, retryable: true);
+    if (!_disposed) notifyListeners();
+    return false;
   }
 
   @override
   void dispose() {
+    _disposed = true;
     _socketSub?.cancel();
     super.dispose();
   }
