@@ -507,7 +507,7 @@ class _BodyState extends State<_Body> {
         child: TradeLinkButton.cta(
           label: 'Quản lý tin đăng',
           icon: Icons.inventory_2_outlined,
-          onPressed: () {},
+          onPressed: () => context.push('${AppPaths.listingDetail}/${item.id}'),
         ),
       );
     }
@@ -518,16 +518,22 @@ class _BodyState extends State<_Body> {
     }
 
     // Buyer actions
+    // "Mua an toàn" chỉ áp dụng cho tin có thể bán trực tiếp (sale/both) —
+    // tin type=trade thuần không có giá bán nên không tạo được giao dịch escrow kiểu sale.
+    final canBuyDirectly = item.type != ListingType.trade;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // CTA chính: Mua an toàn — dùng context.go (cross-branch sang Transactions)
-        TradeLinkButton.cta(
-          label: 'Mua an toàn',
-          icon: Icons.shopping_cart_outlined,
-          onPressed: () => context.go('${AppPaths.createOrder}/${item.id}'),
-        ),
-        const SizedBox(height: TradeLinkSpacing.sm),
+        if (canBuyDirectly) ...[
+          // CTA chính: Mua an toàn — dùng context.go (cross-branch sang Transactions)
+          TradeLinkButton.cta(
+            label: 'Mua an toàn',
+            icon: Icons.shopping_cart_outlined,
+            onPressed: () => context.go('${AppPaths.createOrder}/${item.id}'),
+          ),
+          const SizedBox(height: TradeLinkSpacing.sm),
+        ],
         Row(
           children: [
             Expanded(

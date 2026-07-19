@@ -42,6 +42,9 @@ class ProfileRepository {
       'address': updated.address,
       'avatar': updated.avatar,
       'badges': updated.badges,
+      'bankName': updated.bankName,
+      'bankAccountNumber': updated.bankAccountNumber,
+      'bankAccountHolder': updated.bankAccountHolder,
     };
     if (updated.latitude != null) body['latitude'] = updated.latitude;
     if (updated.longitude != null) body['longitude'] = updated.longitude;

@@ -14,6 +14,7 @@ class StorageService {
   static const _keyRefreshToken = 'auth_refresh_token';
   static const _keyOnboardingDone = 'onboarding_done';
   static const _keyUserId = 'user_id';
+  static const _keyRole = 'user_role';
   static const _keyRecentSearches = 'recent_searches';
   static const _keyNotificationEnabled = 'settings_notifications_enabled';
   static const _keySelectedLanguage = 'settings_selected_language';
@@ -35,6 +36,7 @@ class StorageService {
     await _storage.delete(key: _keyToken);
     await _storage.delete(key: _keyRefreshToken);
     await _storage.delete(key: _keyUserId);
+    await _storage.delete(key: _keyRole);
   }
 
   // ── User ID ──
@@ -46,6 +48,13 @@ class StorageService {
 
   Future<void> clearUserId() =>
       _storage.delete(key: _keyUserId);
+
+  // ── Role — cache để router quyết định redirect ngay khi khởi động, không cần chờ gọi API ──
+  Future<void> saveRole(String role) =>
+      _storage.write(key: _keyRole, value: role);
+
+  Future<String?> getRole() =>
+      _storage.read(key: _keyRole);
 
   // ── Onboarding state ──
   Future<void> setOnboardingDone() =>

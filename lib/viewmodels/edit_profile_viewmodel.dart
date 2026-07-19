@@ -29,6 +29,12 @@ class EditProfileViewModel extends ChangeNotifier {
   double? get longitude => _longitude;
   String? _avatar;
   String? get avatar => _avatar;
+  String _bankName = '';
+  String get bankName => _bankName;
+  String _bankAccountNumber = '';
+  String get bankAccountNumber => _bankAccountNumber;
+  String _bankAccountHolder = '';
+  String get bankAccountHolder => _bankAccountHolder;
 
   EditProfileViewModel() {
     load();
@@ -48,6 +54,9 @@ class EditProfileViewModel extends ChangeNotifier {
       _latitude = p.latitude;
       _longitude = p.longitude;
       _avatar = p.avatar;
+      _bankName = p.bankName ?? '';
+      _bankAccountNumber = p.bankAccountNumber ?? '';
+      _bankAccountHolder = p.bankAccountHolder ?? '';
       _loadState = Success(p);
     } else if (result is FailureResult<Profile>) {
       _loadState = Error(message: result.failure.message, retryable: true);
@@ -58,6 +67,9 @@ class EditProfileViewModel extends ChangeNotifier {
   void onFullNameChanged(String v) => _fullName = v;
   void onPhoneChanged(String v) => _phone = v;
   void onAddressChanged(String v) => _address = v;
+  void onBankNameChanged(String v) => _bankName = v;
+  void onBankAccountNumberChanged(String v) => _bankAccountNumber = v;
+  void onBankAccountHolderChanged(String v) => _bankAccountHolder = v;
 
   void setLocation(double lat, double lng, String address) {
     _latitude = lat;
@@ -110,6 +122,9 @@ class EditProfileViewModel extends ChangeNotifier {
       latitude: _latitude,
       longitude: _longitude,
       avatar: _avatar,
+      bankName: _bankName,
+      bankAccountNumber: _bankAccountNumber,
+      bankAccountHolder: _bankAccountHolder,
     );
 
     final result = await _repository.updateProfile(updated);

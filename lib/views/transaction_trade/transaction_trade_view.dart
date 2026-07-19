@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/ui_state.dart';
+import '../../utils/constants.dart';
 import '../../utils/theme.dart';
 import '../../viewmodels/transaction_trade_viewmodel.dart';
 import '../../widgets/empty_state.dart';
@@ -33,9 +35,16 @@ class _Body extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: TradeLinkColors.surface,
-      appBar: const TradeLinkAppBar(
+      appBar: TradeLinkAppBar(
         title: 'Theo dõi trao đổi',
         subtitle: 'TRAO ĐỔI — Xác nhận song phương',
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.report_gmailerrorred_outlined),
+            tooltip: 'Mở khiếu nại',
+            onPressed: () => context.push('${AppPaths.dispute}/${vm.transactionId}'),
+          ),
+        ],
       ),
       body: switch (vm.state) {
         Loading() => const LoadingSkeleton.hero(),
@@ -58,16 +67,18 @@ class _Body extends StatelessWidget {
                 ),
                 const SizedBox(height: TradeLinkSpacing.lg),
 
-                // Both parties
+                // Both parties — backend coi buyer = party A, seller = party B,
+                // mỗi card chỉ hiện đúng cờ sent/received của chính bên đó.
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Expanded(
                       child: _PartyCard(
-                        name: tx.sellerName,
-                        label: 'Bên A',
+                        name: tx.buyerName,
+                        label: 'Bên mua',
                         sent: tx.partyASent,
-                        received: tx.partyBReceived,
+                        received: tx.partyAReceived,
+                        isMine: vm.myParty == 'A',
                       ),
                     ),
                     Container(
@@ -86,15 +97,76 @@ class _Body extends StatelessWidget {
                     ),
                     Expanded(
                       child: _PartyCard(
-                        name: tx.buyerName,
-                        label: 'Bên B',
+                        name: tx.sellerName,
+                        label: 'Bên bán',
                         sent: tx.partyBSent,
-                        received: tx.partyAReceived,
+                        received: tx.partyBReceived,
+                        isMine: vm.myParty == 'B',
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: TradeLinkSpacing.lg),
+
+                // Nút xác nhận cho bên hiện tại
+                if (vm.myParty != null && !tx.isCompleted) ...[
+                  TradeLinkCard(
+                    padding: const EdgeInsets.all(TradeLinkSpacing.md),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Xác nhận của bạn',
+                          style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: TradeLinkSpacing.sm),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _ConfirmButton(
+                                label: 'Đã gửi đồ',
+                                icon: Icons.upload_outlined,
+                                done: vm.myParty == 'A' ? tx.partyASent == true : tx.partyBSent == true,
+                                isLoading: vm.isConfirming,
+                                onPressed: () => _act(context, vm, () => vm.markMySent(true)),
+                              ),
+                            ),
+                            const SizedBox(width: TradeLinkSpacing.sm),
+                            Expanded(
+                              child: _ConfirmButton(
+                                label: 'Đã nhận đồ',
+                                icon: Icons.download_outlined,
+                                done: vm.myParty == 'A' ? tx.partyAReceived == true : tx.partyBReceived == true,
+                                isLoading: vm.isConfirming,
+                                onPressed: () => _act(context, vm, () => vm.markMyReceived(true)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: TradeLinkSpacing.lg),
+                ],
+
+                if (tx.isCompleted && vm.targetId() != null) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => context.push(
+                        '${AppPaths.review}/${vm.transactionId}/${vm.targetId()}',
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: TradeLinkColors.tradeTeal,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: TradeLinkSpacing.md),
+                      ),
+                      icon: const Icon(Icons.rate_review_outlined),
+                      label: const Text('Đánh giá đối tác'),
+                    ),
+                  ),
+                  const SizedBox(height: TradeLinkSpacing.lg),
+                ],
 
                 // Process info card
                 TradeLinkCard(
@@ -130,6 +202,46 @@ class _Body extends StatelessWidget {
       },
     );
   }
+
+  Future<void> _act(BuildContext context, TransactionTradeViewModel vm, Future<bool> Function() action) async {
+    final ok = await action();
+    if (!ok && context.mounted && vm.actionError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(vm.actionError!)),
+      );
+    }
+  }
+}
+
+class _ConfirmButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool done;
+  final bool isLoading;
+  final VoidCallback onPressed;
+  const _ConfirmButton({
+    required this.label,
+    required this.icon,
+    required this.done,
+    required this.isLoading,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton.icon(
+      onPressed: (done || isLoading) ? null : onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: done ? TradeLinkColors.successGreen : TradeLinkColors.tradeTeal,
+        foregroundColor: Colors.white,
+        disabledBackgroundColor: done
+            ? TradeLinkColors.successGreen.withValues(alpha: 0.6)
+            : TradeLinkColors.tradeTeal.withValues(alpha: 0.4),
+      ),
+      icon: Icon(done ? Icons.check_circle : icon, size: 18),
+      label: Text(done ? '$label ✓' : label, style: const TextStyle(fontSize: 13)),
+    );
+  }
 }
 
 class _PartyCard extends StatelessWidget {
@@ -137,11 +249,13 @@ class _PartyCard extends StatelessWidget {
   final String label;
   final bool? sent;
   final bool? received;
+  final bool isMine;
   const _PartyCard({
     required this.name,
     required this.label,
     this.sent,
     this.received,
+    this.isMine = false,
   });
 
   @override
@@ -154,9 +268,10 @@ class _PartyCard extends StatelessWidget {
           Container(
             width: 48,
             height: 48,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: TradeLinkColors.surfaceContainerHigh,
+              border: isMine ? Border.all(color: TradeLinkColors.tradeTeal, width: 2) : null,
             ),
             alignment: Alignment.center,
             child: const Icon(
@@ -177,9 +292,10 @@ class _PartyCard extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            label,
+            isMine ? '$label (Bạn)' : label,
             style: theme.textTheme.labelSmall?.copyWith(
-              color: TradeLinkColors.onSurfaceVariant,
+              color: isMine ? TradeLinkColors.tradeTeal : TradeLinkColors.onSurfaceVariant,
+              fontWeight: isMine ? FontWeight.w700 : FontWeight.w400,
             ),
           ),
           const SizedBox(height: TradeLinkSpacing.sm),

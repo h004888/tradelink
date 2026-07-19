@@ -2,26 +2,34 @@ import '../core/api_client.dart';
 import '../core/result.dart';
 import '../models/transaction_model.dart';
 
+class PaymentInfo {
+  final String qrUrl;
+  final String paymentCode;
+  final double amount;
+  final String bankAccountNumber;
+  final String bankAccountName;
+
+  const PaymentInfo({
+    required this.qrUrl,
+    required this.paymentCode,
+    required this.amount,
+    required this.bankAccountNumber,
+    required this.bankAccountName,
+  });
+
+  factory PaymentInfo.fromJson(Map<String, dynamic> j) => PaymentInfo(
+        qrUrl: j['qrUrl']?.toString() ?? '',
+        paymentCode: j['paymentCode']?.toString() ?? '',
+        amount: (j['amount'] as num?)?.toDouble() ?? 0,
+        bankAccountNumber: j['bankAccountNumber']?.toString() ?? '',
+        bankAccountName: j['bankAccountName']?.toString() ?? '',
+      );
+}
+
 class TransactionRepository {
   final _api = ApiClient.instance;
 
-  Transaction _fromJson(Map<String, dynamic> j) => Transaction(
-        id: j['_id'] as String? ?? j['id'] as String? ?? '',
-        type: j['type'] == 'trade' ? TransactionType.trade : TransactionType.sale,
-        listingId: j['listingId']?.toString() ?? '',
-        listingTitle: j['listingTitle'] as String? ?? '',
-        buyerId: j['buyerId']?.toString() ?? '',
-        buyerName: j['buyerName'] as String? ?? '',
-        sellerId: j['sellerId']?.toString() ?? '',
-        sellerName: j['sellerName'] as String? ?? '',
-        amount: (j['amount'] as num?)?.toDouble(),
-        escrowStep: _parseEscrowStep(j['escrowStep'] as String?),
-        partyASent: j['partyASent'] as bool?,
-        partyAReceived: j['partyAReceived'] as bool?,
-        partyBSent: j['partyBSent'] as bool?,
-        partyBReceived: j['partyBReceived'] as bool?,
-        createdAt: DateTime.tryParse(j['createdAt']?.toString() ?? '') ?? DateTime.now(),
-      );
+  Transaction _fromJson(Map<String, dynamic> j) => Transaction.fromJson(j);
 
   Future<Result<Transaction>> getById(String id) async {
     final res = await _api.get('/transactions/$id');
@@ -64,12 +72,12 @@ class TransactionRepository {
       FailureResult(failure: final f) => FailureResult<Transaction>(f),
     };
   }
-}
 
-EscrowStep? _parseEscrowStep(String? s) {
-  if (s == null) return null;
-  for (final v in EscrowStep.values) {
-    if (v.name == s) return v;
+  Future<Result<PaymentInfo>> getPaymentInfo(String id) async {
+    final res = await _api.get('/transactions/$id/payment-info');
+    return switch (res) {
+      ResultSuccess(data: final d) => ResultSuccess<PaymentInfo>(PaymentInfo.fromJson(d['data'] as Map<String, dynamic>)),
+      FailureResult(failure: final f) => FailureResult<PaymentInfo>(f),
+    };
   }
-  return null;
 }

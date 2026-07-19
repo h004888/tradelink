@@ -20,12 +20,16 @@ class DisputeRepository {
     required String reason,
     required String description,
     bool priority = false,
+    List<String> attachments = const [],
+    String? chatLogSnapshot,
   }) async {
     final res = await _api.post('/disputes', body: {
       'transactionId': transactionId,
       'reason': reason,
       'description': description,
       'priority': priority,
+      if (attachments.isNotEmpty) 'attachments': attachments,
+      'chatLogSnapshot': ?chatLogSnapshot,
     });
     return switch (res) {
       ResultSuccess(data: final d) => ResultSuccess<Dispute>(Dispute.fromJson(d['data'] as Map<String, dynamic>)),

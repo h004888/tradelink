@@ -10,8 +10,13 @@ class Profile {
   final int successfulTransactions;
   final double successRate;
   final int totalListings;
+  final String role;
   final List<String>? badges;
   final DateTime memberSince;
+  // Thông tin nhận tiền — admin dùng để chuyển khoản thủ công khi bán hàng thành công.
+  final String? bankName;
+  final String? bankAccountNumber;
+  final String? bankAccountHolder;
 
   const Profile({
     required this.id,
@@ -25,9 +30,15 @@ class Profile {
     this.successfulTransactions = 0,
     this.successRate = 100,
     this.totalListings = 0,
+    this.role = 'user',
     this.badges,
     required this.memberSince,
+    this.bankName,
+    this.bankAccountNumber,
+    this.bankAccountHolder,
   });
+
+  bool get isAdmin => role == 'admin';
 
   factory Profile.fromJson(Map<String, dynamic> json) {
     return Profile(
@@ -47,9 +58,13 @@ class Profile {
               0,
       successRate: (json['successRate'] as num?)?.toDouble() ?? 100,
       totalListings: (json['totalListings'] as num?)?.toInt() ?? 0,
+      role: json['role'] as String? ?? 'user',
       badges: (json['badges'] as List?)?.map((e) => e.toString()).toList(),
       memberSince: DateTime.tryParse(json['memberSince']?.toString() ?? '') ??
           DateTime.now(),
+      bankName: json['bankName'] as String?,
+      bankAccountNumber: json['bankAccountNumber'] as String?,
+      bankAccountHolder: json['bankAccountHolder'] as String?,
     );
   }
 
@@ -66,8 +81,12 @@ class Profile {
       'successfulTransactions': successfulTransactions,
       'successRate': successRate,
       'totalListings': totalListings,
+      'role': role,
       'badges': badges,
       'memberSince': memberSince.toIso8601String(),
+      'bankName': bankName,
+      'bankAccountNumber': bankAccountNumber,
+      'bankAccountHolder': bankAccountHolder,
     };
   }
 
@@ -82,6 +101,9 @@ class Profile {
     int? successfulTransactions,
     double? successRate,
     int? totalListings,
+    String? bankName,
+    String? bankAccountNumber,
+    String? bankAccountHolder,
     List<String>? badges,
   }) {
     return Profile(
@@ -97,8 +119,12 @@ class Profile {
           successfulTransactions ?? this.successfulTransactions,
       successRate: successRate ?? this.successRate,
       totalListings: totalListings ?? this.totalListings,
+      role: role,
       badges: badges ?? this.badges,
       memberSince: memberSince,
+      bankName: bankName ?? this.bankName,
+      bankAccountNumber: bankAccountNumber ?? this.bankAccountNumber,
+      bankAccountHolder: bankAccountHolder ?? this.bankAccountHolder,
     );
   }
 

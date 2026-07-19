@@ -1,6 +1,6 @@
 enum TransactionType { sale, trade }
 
-enum EscrowStep { paymentPending, paymentConfirmed, shipping, delivered, reviewPeriod, released }
+enum EscrowStep { paymentPending, paymentConfirmed, shipping, delivered, reviewPeriod, released, refunded }
 
 class EscrowStepHelper {
   static String label(EscrowStep s) => switch (s) {
@@ -10,6 +10,7 @@ class EscrowStepHelper {
     EscrowStep.delivered => 'Đã nhận hàng',
     EscrowStep.reviewPeriod => 'Thời gian đánh giá',
     EscrowStep.released => 'Đã giải ngân',
+    EscrowStep.refunded => 'Đã hoàn tiền',
   };
 
   static String description(EscrowStep s) => switch (s) {
@@ -19,9 +20,12 @@ class EscrowStepHelper {
     EscrowStep.delivered => 'Bạn đã nhận được hàng? Xác nhận để giải ngân.',
     EscrowStep.reviewPeriod => 'Đang chờ đánh giá từ hai bên',
     EscrowStep.released => 'Giao dịch hoàn tất! Tiền đã được chuyển cho người bán.',
+    EscrowStep.refunded => 'Khiếu nại đã được xử lý: tiền đã được hoàn lại cho người mua.',
   };
 
-  static int get total => EscrowStep.values.length;
+  /// Số bước hiển thị trên stepper tuyến tính — 'refunded' là trạng thái rẽ nhánh
+  /// riêng (do admin xử lý khiếu nại), không nằm trong luồng tuyến tính này.
+  static int get total => EscrowStep.values.length - 1;
 }
 
 class Transaction {
@@ -50,4 +54,31 @@ class Transaction {
   });
 
   bool get isCompleted => type == TransactionType.sale ? escrowStep == EscrowStep.released : (partyAReceived == true && partyBReceived == true);
+  bool get isRefunded => escrowStep == EscrowStep.refunded;
+
+  factory Transaction.fromJson(Map<String, dynamic> j) => Transaction(
+        id: j['_id'] as String? ?? j['id'] as String? ?? '',
+        type: j['type'] == 'trade' ? TransactionType.trade : TransactionType.sale,
+        listingId: j['listingId']?.toString() ?? '',
+        listingTitle: j['listingTitle'] as String? ?? '',
+        buyerId: j['buyerId']?.toString() ?? '',
+        buyerName: j['buyerName'] as String? ?? '',
+        sellerId: j['sellerId']?.toString() ?? '',
+        sellerName: j['sellerName'] as String? ?? '',
+        amount: (j['amount'] as num?)?.toDouble(),
+        escrowStep: _parseEscrowStep(j['escrowStep'] as String?),
+        partyASent: j['partyASent'] as bool?,
+        partyAReceived: j['partyAReceived'] as bool?,
+        partyBSent: j['partyBSent'] as bool?,
+        partyBReceived: j['partyBReceived'] as bool?,
+        createdAt: DateTime.tryParse(j['createdAt']?.toString() ?? '') ?? DateTime.now(),
+      );
+}
+
+EscrowStep? _parseEscrowStep(String? s) {
+  if (s == null) return null;
+  for (final v in EscrowStep.values) {
+    if (v.name == s) return v;
+  }
+  return null;
 }

@@ -34,9 +34,21 @@ class _Body extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: TradeLinkColors.surface,
-      appBar: const TradeLinkAppBar(
+      appBar: TradeLinkAppBar(
         title: 'Tin đăng của tôi',
         subtitle: 'Quản lý tin bán và trao đổi',
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.local_offer_outlined),
+            tooltip: 'Đề nghị nhận được',
+            onPressed: () => context.push('${AppPaths.offersList}?scope=received'),
+          ),
+          IconButton(
+            icon: const Icon(Icons.note_add_outlined),
+            tooltip: 'Tin nháp',
+            onPressed: () => context.push(AppPaths.draftListings),
+          ),
+        ],
       ),
       body: Column(
         children: [
