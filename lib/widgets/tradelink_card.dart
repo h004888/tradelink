@@ -41,25 +41,29 @@ class TradeLinkCard extends StatelessWidget {
             border: Border.all(color: TradeLinkColors.cardBorder, width: 1),
           );
 
-    final card = Container(
-      decoration: decoration,
+    final card = Material(
+      color: TradeLinkColors.surfaceContainerLowest,
+      borderRadius: BorderRadius.circular(radius),
       clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (header != null) ...[
+      child: Ink(
+        decoration: decoration,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (header != null) ...[
+              Padding(
+                padding: padding ?? const EdgeInsets.all(TradeLinkSpacing.md),
+                child: header,
+              ),
+              const Divider(height: 1, color: TradeLinkColors.cardDivider),
+            ],
             Padding(
               padding: padding ?? const EdgeInsets.all(TradeLinkSpacing.md),
-              child: header,
+              child: child,
             ),
-            const Divider(height: 1, color: TradeLinkColors.cardDivider),
           ],
-          Padding(
-            padding: padding ?? const EdgeInsets.all(TradeLinkSpacing.md),
-            child: child,
-          ),
-        ],
+        ),
       ),
     );
 

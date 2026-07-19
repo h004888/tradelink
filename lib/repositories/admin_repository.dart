@@ -44,7 +44,7 @@ class Dispute {
       attachments: ((j['attachments'] as List?) ?? []).map((e) => e.toString()).toList(),
       chatLogSnapshot: j['chatLogSnapshot'] as String?,
       createdAt: DateTime.tryParse(j['createdAt']?.toString() ?? '') ?? DateTime.now(),
-      raisedByName: raisedBy?['name'] as String?,
+      raisedByName: raisedBy?['fullName'] as String?,
     );
   }
 }
@@ -67,7 +67,7 @@ class FlaggedListing {
     return FlaggedListing(
       id: j['_id']?.toString() ?? '',
       title: j['title']?.toString() ?? '',
-      sellerName: seller?['name'] as String?,
+      sellerName: seller?['fullName'] as String?,
       flags: (j['flags'] as num?)?.toInt() ?? 0,
     );
   }
@@ -125,7 +125,7 @@ class AdminUserItem {
   AdminUserItem({required this.id, required this.name, required this.email, required this.role, required this.totalTransactions, required this.successRate});
   factory AdminUserItem.fromJson(Map<String, dynamic> j) => AdminUserItem(
     id: j['_id']?.toString() ?? '',
-    name: j['name']?.toString() ?? '',
+    name: j['fullName']?.toString() ?? '',
     email: j['email']?.toString() ?? '',
     role: j['role']?.toString() ?? 'user',
     totalTransactions: (j['totalTransactions'] as num?)?.toInt() ?? 0,
@@ -184,7 +184,7 @@ class PendingPayoutItem {
       id: j['_id']?.toString() ?? '',
       listingTitle: j['listingTitle']?.toString() ?? '',
       amount: (j['amount'] as num?)?.toDouble() ?? 0,
-      sellerName: seller['name']?.toString() ?? 'Không rõ',
+      sellerName: seller['fullName']?.toString() ?? 'Không rõ',
       sellerPhone: seller['phone'] as String?,
       bankName: seller['bankName'] as String?,
       bankAccountNumber: seller['bankAccountNumber'] as String?,
@@ -274,7 +274,7 @@ class AdminRepository {
   }) async {
     final res = await _api.post('/admin/users', body: {
       'email': email,
-      'name': name,
+      'fullName': name,
       'password': password,
       'role': role,
     });

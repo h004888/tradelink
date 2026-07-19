@@ -59,21 +59,24 @@ class _Body extends StatelessWidget {
             _section(
               context,
               title: 'Thông báo',
-              children: const [
+              children: [
                 _SwitchTile(
                   icon: Icons.notifications_outlined,
                   title: 'Thông báo giao dịch',
-                  value: true,
+                  value: vm.isNotificationEnabled,
+                  onChanged: vm.updateNotificationEnabled,
                 ),
                 _SwitchTile(
                   icon: Icons.chat_outlined,
                   title: 'Thông báo tin nhắn',
-                  value: true,
+                  value: vm.isNotificationEnabled,
+                  onChanged: vm.updateNotificationEnabled,
                 ),
                 _SwitchTile(
                   icon: Icons.local_offer_outlined,
                   title: 'Thông báo đề nghị',
-                  value: true,
+                  value: vm.isNotificationEnabled,
+                  onChanged: vm.updateNotificationEnabled,
                 ),
               ],
             ),
@@ -87,15 +90,25 @@ class _Body extends StatelessWidget {
                   icon: Icons.language_outlined,
                   title: 'Ngôn ngữ',
                   trailing: Text(
-                    'Tiếng Việt',
+                    _languageLabel(vm.selectedLanguage),
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: TradeLinkColors.onSurfaceVariant,
                     ),
                   ),
-                  onTap: () => _showLangSheet(context),
+                  onTap: () => _showLangSheet(context, vm),
                 ),
               ],
             ),
+            if (vm.settingsState is Error) ...[
+              const SizedBox(height: TradeLinkSpacing.sm),
+              Text(
+                (vm.settingsState as Error).message,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: TradeLinkColors.error,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
             const SizedBox(height: TradeLinkSpacing.xl),
             // Logout — destructive
             TradeLinkButton.cta(
@@ -195,7 +208,14 @@ class _Body extends StatelessWidget {
     );
   }
 
-  void _showLangSheet(BuildContext context) {
+  String _languageLabel(String value) {
+    return switch (value) {
+      'en' => 'English',
+      _ => 'Tiếng Việt',
+    };
+  }
+
+  void _showLangSheet(BuildContext context, SettingsViewModel vm) {
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: TradeLinkColors.surfaceContainerLowest,
@@ -207,9 +227,25 @@ class _Body extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: TradeLinkSpacing.md),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            children: const [
-              _LangTile(value: 'vi', label: 'Tiếng Việt'),
-              _LangTile(value: 'en', label: 'English'),
+            children: [
+              _LangTile(
+                value: 'vi',
+                label: 'Tiếng Việt',
+                groupValue: vm.selectedLanguage,
+                onChanged: (value) async {
+                  Navigator.pop(ctx);
+                  await vm.updateLanguage(value);
+                },
+              ),
+              _LangTile(
+                value: 'en',
+                label: 'English',
+                groupValue: vm.selectedLanguage,
+                onChanged: (value) async {
+                  Navigator.pop(ctx);
+                  await vm.updateLanguage(value);
+                },
+              ),
             ],
           ),
         ),
@@ -222,10 +258,12 @@ class _SwitchTile extends StatelessWidget {
   final IconData icon;
   final String title;
   final bool value;
+  final ValueChanged<bool> onChanged;
   const _SwitchTile({
     required this.icon,
     required this.title,
     required this.value,
+    required this.onChanged,
   });
 
   @override
@@ -239,7 +277,7 @@ class _SwitchTile extends StatelessWidget {
             ),
       ),
       value: value,
-      onChanged: null,
+      onChanged: onChanged,
     );
   }
 }
@@ -247,14 +285,23 @@ class _SwitchTile extends StatelessWidget {
 class _LangTile extends StatelessWidget {
   final String value;
   final String label;
-  const _LangTile({required this.value, required this.label});
+  final String groupValue;
+  final ValueChanged<String> onChanged;
+  const _LangTile({
+    required this.value,
+    required this.label,
+    required this.groupValue,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
     return RadioListTile<String>(
       value: value,
-      groupValue: 'vi',
-      onChanged: null,
+      groupValue: groupValue,
+      onChanged: (v) {
+        if (v != null) onChanged(v);
+      },
       title: Text(label),
     );
   }

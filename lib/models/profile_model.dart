@@ -1,16 +1,17 @@
 class Profile {
   final String id;
-  final String name;
+  final String fullName;
   final String phone;
-  final String? avatarUrl;
+  final String? avatar;
   final String? address;
   final double? latitude;
   final double? longitude;
-  final int reputationScore;
-  final int totalTransactions;
+  final int uyTinScore;
+  final int successfulTransactions;
   final double successRate;
   final int totalListings;
   final String role;
+  final List<String>? badges;
   final DateTime memberSince;
   // Thông tin nhận tiền — admin dùng để chuyển khoản thủ công khi bán hàng thành công.
   final String? bankName;
@@ -19,17 +20,18 @@ class Profile {
 
   const Profile({
     required this.id,
-    required this.name,
+    required this.fullName,
     required this.phone,
-    this.avatarUrl,
+    this.avatar,
     this.address,
     this.latitude,
     this.longitude,
-    this.reputationScore = 0,
-    this.totalTransactions = 0,
+    this.uyTinScore = 0,
+    this.successfulTransactions = 0,
     this.successRate = 100,
     this.totalListings = 0,
     this.role = 'user',
+    this.badges,
     required this.memberSince,
     this.bankName,
     this.bankAccountNumber,
@@ -38,34 +40,87 @@ class Profile {
 
   bool get isAdmin => role == 'admin';
 
+  factory Profile.fromJson(Map<String, dynamic> json) {
+    return Profile(
+      id: json['_id'] as String? ?? json['id'] as String? ?? '',
+      fullName: json['fullName'] as String? ?? json['name'] as String? ?? '',
+      phone: json['phone'] as String? ?? '',
+      avatar: json['avatar'] as String? ?? json['avatarUrl'] as String?,
+      address: json['address'] as String?,
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
+      uyTinScore: (json['uyTinScore'] as num?)?.toInt() ??
+          (json['reputationScore'] as num?)?.toInt() ??
+          0,
+      successfulTransactions:
+          (json['successfulTransactions'] as num?)?.toInt() ??
+              (json['totalTransactions'] as num?)?.toInt() ??
+              0,
+      successRate: (json['successRate'] as num?)?.toDouble() ?? 100,
+      totalListings: (json['totalListings'] as num?)?.toInt() ?? 0,
+      role: json['role'] as String? ?? 'user',
+      badges: (json['badges'] as List?)?.map((e) => e.toString()).toList(),
+      memberSince: DateTime.tryParse(json['memberSince']?.toString() ?? '') ??
+          DateTime.now(),
+      bankName: json['bankName'] as String?,
+      bankAccountNumber: json['bankAccountNumber'] as String?,
+      bankAccountHolder: json['bankAccountHolder'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'fullName': fullName,
+      'phone': phone,
+      'avatar': avatar,
+      'address': address,
+      'latitude': latitude,
+      'longitude': longitude,
+      'uyTinScore': uyTinScore,
+      'successfulTransactions': successfulTransactions,
+      'successRate': successRate,
+      'totalListings': totalListings,
+      'role': role,
+      'badges': badges,
+      'memberSince': memberSince.toIso8601String(),
+      'bankName': bankName,
+      'bankAccountNumber': bankAccountNumber,
+      'bankAccountHolder': bankAccountHolder,
+    };
+  }
+
   Profile copyWith({
-    String? name,
+    String? fullName,
     String? phone,
-    String? avatarUrl,
+    String? avatar,
     String? address,
     double? latitude,
     double? longitude,
-    int? reputationScore,
-    int? totalTransactions,
+    int? uyTinScore,
+    int? successfulTransactions,
     double? successRate,
     int? totalListings,
     String? bankName,
     String? bankAccountNumber,
     String? bankAccountHolder,
+    List<String>? badges,
   }) {
     return Profile(
       id: id,
-      name: name ?? this.name,
+      fullName: fullName ?? this.fullName,
       phone: phone ?? this.phone,
-      avatarUrl: avatarUrl ?? this.avatarUrl,
+      avatar: avatar ?? this.avatar,
       address: address ?? this.address,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
-      reputationScore: reputationScore ?? this.reputationScore,
-      totalTransactions: totalTransactions ?? this.totalTransactions,
+      uyTinScore: uyTinScore ?? this.uyTinScore,
+      successfulTransactions:
+          successfulTransactions ?? this.successfulTransactions,
       successRate: successRate ?? this.successRate,
       totalListings: totalListings ?? this.totalListings,
       role: role,
+      badges: badges ?? this.badges,
       memberSince: memberSince,
       bankName: bankName ?? this.bankName,
       bankAccountNumber: bankAccountNumber ?? this.bankAccountNumber,
@@ -74,9 +129,9 @@ class Profile {
   }
 
   String get reputationTier {
-    if (reputationScore >= 90) return 'Vàng';
-    if (reputationScore >= 70) return 'Bạc';
-    if (reputationScore >= 50) return 'Đồng';
+    if (uyTinScore >= 90) return 'Vàng';
+    if (uyTinScore >= 70) return 'Bạc';
+    if (uyTinScore >= 50) return 'Đồng';
     return 'Mới';
   }
 }
