@@ -286,6 +286,13 @@ class _VerifyOTPViewModel extends ChangeNotifier {
         if (refreshToken != null) {
           await ApiClient.instance.setRefreshToken(refreshToken);
         }
+        // Lưu userId từ response — cần cho chat isMe check và các tính năng khác
+        final userId = (data['user'] is Map)
+            ? ((data['user'] as Map)['_id'] as String? ?? (data['user'] as Map)['id'] as String?)
+            : (data['userId'] as String?);
+        if (userId != null) {
+          await ApiClient.instance.setUserId(userId);
+        }
         _isLoading = false;
         notifyListeners();
         return true;

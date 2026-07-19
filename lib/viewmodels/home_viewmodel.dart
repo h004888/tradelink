@@ -24,6 +24,10 @@ class HomeViewModel extends ChangeNotifier {
   FeedFilter _filter = const FeedFilter();
   FeedFilter get filter => _filter;
 
+  // ── Promo banner (tin đăng boosted) ──
+  UiState<List<Listing>> _bannerState = const Loading();
+  UiState<List<Listing>> get bannerState => _bannerState;
+
   // ── Active transactions ──
   UiState<List<Transaction>> _activeTransactions = const Loading();
   UiState<List<Transaction>> get activeTransactions => _activeTransactions;
@@ -54,6 +58,7 @@ class HomeViewModel extends ChangeNotifier {
     _hasMore = true;
     _loadMoreError = null;
     _feedState = const Loading();
+    _bannerState = const Loading();
     _activeTransactions = const Loading();
     notifyListeners();
 
@@ -65,6 +70,11 @@ class HomeViewModel extends ChangeNotifier {
         if (r is ResultSuccess<FeedData>) {
           _hasMore = r.data.hasMore;
         }
+      }),
+      _listingRepo.getFeaturedListings(limit: 8).then((r) {
+        _bannerState = r is ResultSuccess<List<Listing>>
+            ? Success(r.data)
+            : Error(message: (r as FailureResult<List<Listing>>).failure.message);
       }),
     ];
 

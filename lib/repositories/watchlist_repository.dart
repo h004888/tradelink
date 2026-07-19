@@ -63,7 +63,28 @@ class WatchlistRepository {
     return switch (res) {
       ResultSuccess(data: final d) => ResultSuccess<List<Listing>>(
           ((d['data'] as List?) ?? [])
-              .map((e) => _fromListingJson(((e as Map<String, dynamic>)['listingId'] as Map<String, dynamic>? ?? {})))
+              .map((e) {
+                // Backend có thể populate listingId (Map) hoặc chỉ trả ObjectId (String)
+                // → Handle cả 2 trường hợp
+                final rawListingId = (e as Map<String, dynamic>)['listingId'];
+                if (rawListingId is String) {
+                  // Chỉ có ID, không có data → tạo Listing rỗng với ID
+                  return Listing(
+                    id: rawListingId,
+                    title: '',
+                    description: '',
+                    category: '',
+                    condition: ItemCondition.used,
+                    type: ListingType.sale,
+                    status: ListingStatus.active,
+                    sellerId: '',
+                    sellerName: '',
+                    createdAt: DateTime.now(),
+                  );
+                }
+                return _fromListingJson(
+                    rawListingId as Map<String, dynamic>? ?? {});
+              })
               .toList(),
         ),
       FailureResult(failure: final f) => FailureResult<List<Listing>>(f),

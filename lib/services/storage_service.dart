@@ -1,4 +1,5 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Service quản lý persistent storage cho auth tokens và onboarding state.
 /// Dùng FlutterSecureStorage (mã hóa) thay vì SharedPreferences (plaintext).
@@ -13,6 +14,7 @@ class StorageService {
   static const _keyRefreshToken = 'auth_refresh_token';
   static const _keyOnboardingDone = 'onboarding_done';
   static const _keyUserId = 'user_id';
+  static const _keyRecentSearches = 'recent_searches';
 
   // ── Auth tokens ──
   Future<void> saveToken(String token) =>
@@ -50,5 +52,16 @@ class StorageService {
   Future<bool> isOnboardingDone() async {
     final v = await _storage.read(key: _keyOnboardingDone);
     return v == 'true';
+  }
+
+  // ── Recent searches (không nhạy cảm → SharedPreferences là đủ) ──
+  Future<List<String>> getRecentSearches() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList(_keyRecentSearches) ?? const [];
+  }
+
+  Future<void> saveRecentSearches(List<String> searches) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_keyRecentSearches, searches);
   }
 }

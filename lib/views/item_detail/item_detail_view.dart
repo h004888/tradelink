@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/result.dart';
 import '../../core/ui_state.dart';
 import '../../models/listing_model.dart';
 import '../../models/seller_stats.dart';
+import '../../repositories/chat_repository.dart';
 import '../../utils/constants.dart';
 import '../../utils/format.dart';
 import '../../utils/theme.dart';
@@ -38,10 +40,37 @@ class _Body extends StatefulWidget {
 
 class _BodyState extends State<_Body> {
   int _currentImageIndex = 0;
+  bool _openingChat = false;
 
   @override
   void dispose() {
     super.dispose();
+  }
+
+  /// Gọi API getOrCreateConversation để có real conversation ID, sau đó navigate.
+  /// Dùng `context.go` thay vì `context.push` để tránh Navigator key collision
+  /// khi cross-branch navigation (item detail ở branch 0 → chat ở branch 1)
+  /// — đây là bug đã biết của GoRouter 14.x với StatefulShellRoute.
+  Future<void> _openChat(BuildContext context, String sellerId, String listingId) async {
+    if (_openingChat) return;
+    setState(() => _openingChat = true);
+    try {
+      final result = await ChatRepository().getOrCreateConversation(
+        sellerId,
+        listingId: listingId,
+      );
+      if (!context.mounted) return;
+      switch (result) {
+        case ResultSuccess<String>(data: final convId):
+          context.go('${AppPaths.chat}/$convId');
+        case FailureResult<String>(failure: final err):
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Không thể mở chat: ${err.message}')),
+          );
+      }
+    } finally {
+      if (mounted) setState(() => _openingChat = false);
+    }
   }
 
   @override
@@ -492,11 +521,11 @@ class _BodyState extends State<_Body> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // CTA chính: Mua an toàn
+        // CTA chính: Mua an toàn — dùng context.go (cross-branch sang Transactions)
         TradeLinkButton.cta(
           label: 'Mua an toàn',
           icon: Icons.shopping_cart_outlined,
-          onPressed: () => context.push('${AppPaths.createOrder}/${item.id}'),
+          onPressed: () => context.go('${AppPaths.createOrder}/${item.id}'),
         ),
         const SizedBox(height: TradeLinkSpacing.sm),
         Row(
@@ -505,6 +534,7 @@ class _BodyState extends State<_Body> {
               child: TradeLinkButton.secondary(
                 label: 'Gửi offer',
                 icon: Icons.send_outlined,
+                // Same branch (Home sub-route) → push OK
                 onPressed: () => context.push('${AppPaths.sendOffer}/${item.id}'),
               ),
             ),
@@ -513,7 +543,10 @@ class _BodyState extends State<_Body> {
               child: TradeLinkButton.secondary(
                 label: 'Nhắn người bán',
                 icon: Icons.chat_bubble_outline,
-                onPressed: () => context.push('${AppPaths.chat}/conv-${item.id}?listingId=${item.id}'),
+                // Disable khi đang gọi API; spinner không có sẵn trên secondary button
+                onPressed: _openingChat
+                    ? null
+                    : () => _openChat(context, item.sellerId, item.id),
               ),
             ),
           ],

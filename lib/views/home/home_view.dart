@@ -12,6 +12,7 @@ import '../../viewmodels/home_viewmodel.dart';
 import '../../widgets/active_transaction_card.dart';
 import '../../widgets/category_horizontal_list.dart';
 import '../../widgets/home_search_bar.dart';
+import '../../widgets/promo_banner.dart';
 import '../../widgets/safe_transaction_banner.dart';
 
 class HomeView extends StatelessWidget {
@@ -108,6 +109,8 @@ class _HomeBodyState extends State<_HomeBody> {
                   SliverToBoxAdapter(child: _buildHeader()),
                   // Search bar
                   const SliverToBoxAdapter(child: HomeSearchBar()),
+                  // Banner khuyến mãi (tin boosted)
+                  SliverToBoxAdapter(child: PromoBanner(state: vm.bannerState)),
                   // Active transaction card
                   SliverToBoxAdapter(child: ActiveTransactionCard(
                     transaction: activeTx,
