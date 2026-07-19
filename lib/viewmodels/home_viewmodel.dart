@@ -137,14 +137,16 @@ class HomeViewModel extends ChangeNotifier {
   }
 
   void goToSearch(BuildContext context) => context.push(AppPaths.search);
-  void goToCategory(BuildContext context, String name) =>
-      context.push('${AppPaths.category}/${Uri.encodeComponent(name)}');
+  void goToCategory(BuildContext context, String categoryId) =>
+      context.push('/home/category/${Uri.encodeComponent(categoryId)}');
   void goToItemDetail(BuildContext context, String id) =>
       context.push('${AppPaths.itemDetail}/$id');
   void goToTransactionDetail(BuildContext context, Transaction tx) {
     final path = tx.type == TransactionType.trade
         ? '${AppPaths.transactionTrade}/${tx.id}'
         : '${AppPaths.transactionSale}/${tx.id}';
-    context.push(path);
+    // go() — route nằm lồng trong nhánh "Giao dịch", push() từ Home (nhánh khác)
+    // gây xung đột GlobalKey trong Navigator.
+    context.go(path);
   }
 }

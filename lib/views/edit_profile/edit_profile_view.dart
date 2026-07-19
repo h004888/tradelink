@@ -232,6 +232,47 @@ class _EditProfileBody extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: TradeLinkSpacing.lg),
+          Text(
+            'Thông tin nhận tiền',
+            style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: TradeLinkSpacing.xs),
+          Text(
+            'Dùng để nhận thanh toán khi bạn bán được hàng — admin sẽ chuyển khoản vào đây.',
+            style: theme.textTheme.bodySmall?.copyWith(color: TradeLinkColors.onSurfaceVariant),
+          ),
+          const SizedBox(height: TradeLinkSpacing.sm),
+          TextField(
+            controller: TextEditingController(text: vm.bankName),
+            style: theme.textTheme.bodyLarge,
+            decoration: const InputDecoration(
+              labelText: 'Tên ngân hàng',
+              prefixIcon: Icon(Icons.account_balance_outlined),
+            ),
+            onChanged: vm.onBankNameChanged,
+          ),
+          const SizedBox(height: TradeLinkSpacing.md),
+          TextField(
+            controller: TextEditingController(text: vm.bankAccountNumber),
+            style: theme.textTheme.bodyLarge,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Số tài khoản',
+              prefixIcon: Icon(Icons.numbers_outlined),
+            ),
+            onChanged: vm.onBankAccountNumberChanged,
+          ),
+          const SizedBox(height: TradeLinkSpacing.md),
+          TextField(
+            controller: TextEditingController(text: vm.bankAccountHolder),
+            style: theme.textTheme.bodyLarge,
+            decoration: const InputDecoration(
+              labelText: 'Chủ tài khoản',
+              prefixIcon: Icon(Icons.badge_outlined),
+            ),
+            onChanged: vm.onBankAccountHolderChanged,
+          ),
           if (vm.avatarState is Error) ...[
             const SizedBox(height: TradeLinkSpacing.xs),
             Text(

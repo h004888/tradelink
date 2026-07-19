@@ -48,6 +48,10 @@ class AuthRepository {
     if (newRefreshToken != null) {
       await _api.setRefreshToken(newRefreshToken);
     }
+    if (data['user'] is Map) {
+      final role = (data['user'] as Map)['role'] as String?;
+      if (role != null) await _api.setRole(role);
+    }
     return ResultSuccess<bool>(true);
   }
 
@@ -133,6 +137,10 @@ class AuthRepository {
       } else if (data['user'] is Map) {
         final userId = (data['user'] as Map)['_id'] as String? ?? (data['user'] as Map)['id'] as String?;
         if (userId != null) await _api.setUserId(userId);
+      }
+      if (data['user'] is Map) {
+        final role = (data['user'] as Map)['role'] as String?;
+        if (role != null) await _api.setRole(role);
       }
       return ResultSuccess<bool>(true);
     }

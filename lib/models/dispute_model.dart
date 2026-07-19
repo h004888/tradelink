@@ -7,6 +7,9 @@ class Dispute {
   final bool priority;
   final String status; // 'open' | 'resolved' | 'closed'
   final String? resolution;
+  final String? decision; // 'refund' | 'release' | 'reject'
+  final List<String> attachments;
+  final String? chatLogSnapshot;
   final DateTime createdAt;
 
   const Dispute({
@@ -18,6 +21,9 @@ class Dispute {
     required this.priority,
     required this.status,
     this.resolution,
+    this.decision,
+    this.attachments = const [],
+    this.chatLogSnapshot,
     required this.createdAt,
   });
 
@@ -31,6 +37,9 @@ class Dispute {
       priority: j['priority'] == true,
       status: j['status']?.toString() ?? 'open',
       resolution: j['resolution'] as String?,
+      decision: j['decision'] as String?,
+      attachments: ((j['attachments'] as List?) ?? []).map((e) => e.toString()).toList(),
+      chatLogSnapshot: j['chatLogSnapshot'] as String?,
       createdAt: DateTime.tryParse(j['createdAt']?.toString() ?? '') ?? DateTime.now(),
     );
   }

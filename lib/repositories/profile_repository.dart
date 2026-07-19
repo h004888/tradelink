@@ -24,7 +24,11 @@ class ProfileRepository {
         totalTransactions: (j['totalTransactions'] as num?)?.toInt() ?? 0,
         successRate: (j['successRate'] as num?)?.toDouble() ?? 100,
         totalListings: (j['totalListings'] as num?)?.toInt() ?? 0,
+        role: j['role'] as String? ?? 'user',
         memberSince: DateTime.tryParse(j['memberSince']?.toString() ?? '') ?? DateTime.now(),
+        bankName: j['bankName'] as String?,
+        bankAccountNumber: j['bankAccountNumber'] as String?,
+        bankAccountHolder: j['bankAccountHolder'] as String?,
       );
 
   Future<Result<Profile>> getProfile() async {
@@ -52,6 +56,9 @@ class ProfileRepository {
       'phone': updated.phone,
       'address': updated.address,
       'avatarUrl': updated.avatarUrl,
+      'bankName': updated.bankName,
+      'bankAccountNumber': updated.bankAccountNumber,
+      'bankAccountHolder': updated.bankAccountHolder,
     };
     if (updated.latitude != null) body['latitude'] = updated.latitude;
     if (updated.longitude != null) body['longitude'] = updated.longitude;

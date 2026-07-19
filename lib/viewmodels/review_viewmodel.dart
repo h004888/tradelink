@@ -21,11 +21,19 @@ class ReviewViewModel extends ChangeNotifier {
   String _comment = '';
   String get comment => _comment;
 
+  final Set<String> _selectedTags = {};
+  Set<String> get selectedTags => Set.unmodifiable(_selectedTags);
+
   void setRating(int v) { _rating = v; notifyListeners(); }
   void setCommunication(int v) { _communication = v; notifyListeners(); }
   void setPunctuality(int v) { _punctuality = v; notifyListeners(); }
   void setQuality(int v) { _quality = v; notifyListeners(); }
   void setComment(String v) { _comment = v; }
+
+  void toggleTag(String tag) {
+    if (!_selectedTags.remove(tag)) _selectedTags.add(tag);
+    notifyListeners();
+  }
 
   String? validate() {
     if (_rating == 0) return 'Vui lòng chọn đánh giá tổng';
@@ -44,6 +52,10 @@ class ReviewViewModel extends ChangeNotifier {
     }
     _state = const Loading();
     notifyListeners();
+
+    final tagsPrefix = _selectedTags.isNotEmpty ? _selectedTags.map((t) => '#$t').join(' ') : '';
+    final fullComment = [tagsPrefix, _comment].where((s) => s.isNotEmpty).join('\n');
+
     final res = await _repository.submitReview(
       transactionId: transactionId,
       targetId: targetId,
@@ -51,7 +63,7 @@ class ReviewViewModel extends ChangeNotifier {
       communication: _communication,
       punctuality: _punctuality,
       quality: _quality,
-      comment: _comment.isNotEmpty ? _comment : null,
+      comment: fullComment.isNotEmpty ? fullComment : null,
     );
     switch (res) {
       case ResultSuccess<bool>():

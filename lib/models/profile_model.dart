@@ -10,7 +10,12 @@ class Profile {
   final int totalTransactions;
   final double successRate;
   final int totalListings;
+  final String role;
   final DateTime memberSince;
+  // Thông tin nhận tiền — admin dùng để chuyển khoản thủ công khi bán hàng thành công.
+  final String? bankName;
+  final String? bankAccountNumber;
+  final String? bankAccountHolder;
 
   const Profile({
     required this.id,
@@ -24,8 +29,14 @@ class Profile {
     this.totalTransactions = 0,
     this.successRate = 100,
     this.totalListings = 0,
+    this.role = 'user',
     required this.memberSince,
+    this.bankName,
+    this.bankAccountNumber,
+    this.bankAccountHolder,
   });
+
+  bool get isAdmin => role == 'admin';
 
   Profile copyWith({
     String? name,
@@ -38,6 +49,9 @@ class Profile {
     int? totalTransactions,
     double? successRate,
     int? totalListings,
+    String? bankName,
+    String? bankAccountNumber,
+    String? bankAccountHolder,
   }) {
     return Profile(
       id: id,
@@ -51,7 +65,11 @@ class Profile {
       totalTransactions: totalTransactions ?? this.totalTransactions,
       successRate: successRate ?? this.successRate,
       totalListings: totalListings ?? this.totalListings,
+      role: role,
       memberSince: memberSince,
+      bankName: bankName ?? this.bankName,
+      bankAccountNumber: bankAccountNumber ?? this.bankAccountNumber,
+      bankAccountHolder: bankAccountHolder ?? this.bankAccountHolder,
     );
   }
 

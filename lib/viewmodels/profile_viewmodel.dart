@@ -50,7 +50,7 @@ class ProfileViewModel extends ChangeNotifier {
   }
 
   void navigateToSettings(BuildContext context) {
-    // TODO: Settings screen
+    context.push(AppPaths.settings);
   }
 
   Future<void> logout(BuildContext context) async {

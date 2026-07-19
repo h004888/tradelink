@@ -278,10 +278,26 @@ class _ProfileBody extends StatelessWidget {
                 const Divider(height: 1, indent: 56, color: TradeLinkColors.cardDivider),
                 _menuItem(
                   context,
+                  Icons.local_offer_outlined,
+                  'Đề nghị',
+                  onTap: () => context.push(AppPaths.offersList),
+                ),
+                const Divider(height: 1, indent: 56, color: TradeLinkColors.cardDivider),
+                _menuItem(
+                  context,
                   Icons.notifications_outlined,
                   'Thông báo',
                   onTap: () => context.push(AppPaths.notifications),
                 ),
+                if (profile.isAdmin) ...[
+                  const Divider(height: 1, indent: 56, color: TradeLinkColors.cardDivider),
+                  _menuItem(
+                    context,
+                    Icons.admin_panel_settings_outlined,
+                    'Quản trị hệ thống (Admin)',
+                    onTap: () => context.push(AppPaths.admin),
+                  ),
+                ],
                 const Divider(height: 1, indent: 56, color: TradeLinkColors.cardDivider),
                 _menuItem(
                   context,

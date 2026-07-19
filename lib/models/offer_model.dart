@@ -1,5 +1,7 @@
 enum OfferType { buy, trade }
 
+enum OfferStatus { pending, accepted, rejected }
+
 class Offer {
   final String id;
   final String listingId;
@@ -13,6 +15,8 @@ class Offer {
   final double? cashTopUp;
   final OfferType type;
   final String message;
+  final OfferStatus status;
+  final String? transactionId;
   final DateTime createdAt;
 
   const Offer({
@@ -28,6 +32,8 @@ class Offer {
     this.cashTopUp,
     required this.type,
     required this.message,
+    this.status = OfferStatus.pending,
+    this.transactionId,
     required this.createdAt,
   });
 
@@ -47,7 +53,31 @@ class Offer {
       cashTopUp: (j['cashTopUp'] as num?)?.toDouble(),
       type: (j['type']?.toString() == 'trade') ? OfferType.trade : OfferType.buy,
       message: j['message']?.toString() ?? '',
+      status: switch (j['status']?.toString()) {
+        'accepted' => OfferStatus.accepted,
+        'rejected' => OfferStatus.rejected,
+        _ => OfferStatus.pending,
+      },
+      transactionId: j['transactionId']?.toString(),
       createdAt: DateTime.tryParse(j['createdAt']?.toString() ?? '') ?? DateTime.now(),
     );
   }
+
+  Offer copyWith({OfferStatus? status, String? transactionId}) => Offer(
+        id: id,
+        listingId: listingId,
+        listingTitle: listingTitle,
+        listingPrice: listingPrice,
+        buyerId: buyerId,
+        buyerName: buyerName,
+        buyerPhone: buyerPhone,
+        price: price,
+        tradeItemDescription: tradeItemDescription,
+        cashTopUp: cashTopUp,
+        type: type,
+        message: message,
+        status: status ?? this.status,
+        transactionId: transactionId ?? this.transactionId,
+        createdAt: createdAt,
+      );
 }

@@ -108,6 +108,46 @@ class _Body extends StatelessWidget {
               maxLines: 4,
               onChanged: vm.setDescription,
             ),
+            const SizedBox(height: TradeLinkSpacing.lg),
+
+            Text(
+              'Ảnh bằng chứng (tối đa 5)',
+              style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: TradeLinkSpacing.xs),
+            Wrap(
+              spacing: TradeLinkSpacing.xs,
+              runSpacing: TradeLinkSpacing.xs,
+              children: [
+                for (var i = 0; i < vm.attachments.length; i++)
+                  _AttachmentThumb(
+                    url: vm.attachments[i],
+                    onRemove: () => vm.removeAttachment(i),
+                  ),
+                if (vm.attachments.length < 5)
+                  _AddAttachmentButton(
+                    isLoading: vm.isUploadingImage,
+                    onTap: vm.isUploadingImage ? null : vm.pickAndUploadImage,
+                  ),
+              ],
+            ),
+            const SizedBox(height: TradeLinkSpacing.md),
+
+            Material(
+              color: TradeLinkColors.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(TradeLinkRadii.md),
+              child: SwitchListTile(
+                value: vm.includeChatLog,
+                onChanged: vm.toggleIncludeChatLog,
+                title: const Text('Đính kèm lịch sử trò chuyện', style: TextStyle(fontSize: 14)),
+                subtitle: Text(
+                  '20 tin nhắn gần nhất với đối phương sẽ được gửi kèm khiếu nại',
+                  style: theme.textTheme.labelSmall?.copyWith(color: TradeLinkColors.onSurfaceVariant),
+                ),
+                dense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: TradeLinkSpacing.sm),
+              ),
+            ),
             const SizedBox(height: TradeLinkSpacing.xl),
             // Destructive CTA — use error color
             SizedBox(
@@ -159,6 +199,80 @@ class _Body extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _AttachmentThumb extends StatelessWidget {
+  final String url;
+  final VoidCallback onRemove;
+  const _AttachmentThumb({required this.url, required this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(TradeLinkRadii.sm),
+          child: Image.network(
+            url,
+            width: 72,
+            height: 72,
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => Container(
+              width: 72,
+              height: 72,
+              color: TradeLinkColors.surfaceContainerHigh,
+              child: const Icon(Icons.broken_image_outlined, color: TradeLinkColors.outlineVariant),
+            ),
+          ),
+        ),
+        Positioned(
+          top: 2,
+          right: 2,
+          child: GestureDetector(
+            onTap: onRemove,
+            child: Container(
+              padding: const EdgeInsets.all(2),
+              decoration: const BoxDecoration(
+                color: Colors.black54,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.close, size: 14, color: Colors.white),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AddAttachmentButton extends StatelessWidget {
+  final bool isLoading;
+  final VoidCallback? onTap;
+  const _AddAttachmentButton({required this.isLoading, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 72,
+        height: 72,
+        decoration: BoxDecoration(
+          color: TradeLinkColors.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(TradeLinkRadii.sm),
+          border: Border.all(color: TradeLinkColors.cardBorder),
+        ),
+        alignment: Alignment.center,
+        child: isLoading
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Icons.add_photo_alternate_outlined, color: TradeLinkColors.onSurfaceVariant),
       ),
     );
   }
