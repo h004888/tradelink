@@ -51,6 +51,7 @@ class SearchRepository {
     String? categoryId,
     double? minPrice,
     double? maxPrice,
+    String? sort,
   }) async {
     final q = <String, String>{};
     if (query.isNotEmpty) q['q'] = query;
@@ -59,6 +60,7 @@ class SearchRepository {
     if (categoryId != null) q['categoryId'] = categoryId;
     if (minPrice != null) q['minPrice'] = minPrice.toString();
     if (maxPrice != null) q['maxPrice'] = maxPrice.toString();
+    if (sort != null) q['sort'] = sort;
 
     final res = await _api.get('/search', query: q.isEmpty ? null : q);
     return switch (res) {

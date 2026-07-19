@@ -85,6 +85,7 @@ class _Body extends StatelessWidget {
                   prefixIcon: Icon(Icons.swap_horiz),
                 ),
                 maxLines: 2,
+                onChanged: vm.setTradeItemDescription,
               ),
               const SizedBox(height: TradeLinkSpacing.md),
               TextField(
@@ -93,6 +94,7 @@ class _Body extends StatelessWidget {
                   prefixIcon: Icon(Icons.monetization_on_outlined),
                 ),
                 keyboardType: TextInputType.number,
+                onChanged: vm.setCashTopUp,
               ),
             ],
             const SizedBox(height: TradeLinkSpacing.md),
@@ -113,7 +115,18 @@ class _Body extends StatelessWidget {
                   ? null
                   : () async {
                       final ok = await vm.submit();
-                      if (ok && context.mounted) context.pop();
+                      if (!context.mounted) return;
+                      if (ok) {
+                        context.pop();
+                      } else {
+                        final state = vm.state;
+                        final msg = state is Error<void>
+                            ? state.message
+                            : 'Không thể gửi đề nghị. Vui lòng thử lại.';
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(msg)),
+                        );
+                      }
                     },
             ),
             const SizedBox(height: TradeLinkSpacing.md),

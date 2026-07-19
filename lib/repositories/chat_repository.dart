@@ -6,19 +6,38 @@ class ChatMessage {
   final String senderId;
   final String senderName;
   final String text;
+  final String? imageUrl;
   final DateTime timestamp;
   final bool isOffer;
   final String? offerListingId;
+  final List<String> readBy;
 
   const ChatMessage({
     required this.id,
     required this.senderId,
     required this.senderName,
     required this.text,
+    this.imageUrl,
     required this.timestamp,
     this.isOffer = false,
     this.offerListingId,
+    this.readBy = const [],
   });
+
+  /// Đã được người khác (ngoài người gửi) đọc chưa — dùng để hiện tick "đã xem".
+  bool get isSeenByOther => readBy.any((id) => id != senderId);
+
+  ChatMessage copyWithReadBy(List<String> readBy) => ChatMessage(
+        id: id,
+        senderId: senderId,
+        senderName: senderName,
+        text: text,
+        imageUrl: imageUrl,
+        timestamp: timestamp,
+        isOffer: isOffer,
+        offerListingId: offerListingId,
+        readBy: readBy,
+      );
 }
 
 class ChatConversation {
@@ -53,9 +72,11 @@ class ChatRepository {
         senderId: j['senderId']?.toString() ?? '',
         senderName: j['senderName'] as String? ?? '',
         text: j['text'] as String? ?? '',
+        imageUrl: j['imageUrl'] as String?,
         timestamp: DateTime.tryParse(j['createdAt']?.toString() ?? '') ?? DateTime.now(),
         isOffer: j['isOffer'] as bool? ?? false,
         offerListingId: j['offerListingId']?.toString(),
+        readBy: ((j['readBy'] as List?) ?? []).map((e) => e.toString()).toList(),
       );
 
   // E1 — list conversations of current user
@@ -102,17 +123,30 @@ class ChatRepository {
   }
 
   // E3 — send message
-  Future<Result<ChatMessage>> sendMessage(String conversationId, String text, {bool isOffer = false, String? offerListingId}) async {
+  Future<Result<ChatMessage>> sendMessage(String conversationId, String text,
+      {bool isOffer = false, String? offerListingId, String? imageUrl}) async {
     final res = await _api.post('/conversations/$conversationId/messages', body: {
       'text': text,
       'isOffer': isOffer,
       'offerListingId': offerListingId,
+      'imageUrl': imageUrl,
     });
     if (res is FailureResult<Map<String, dynamic>>) {
       return FailureResult<ChatMessage>(res.failure);
     }
     final msg = _msgFromJson((res as ResultSuccess<Map<String, dynamic>>).data['data'] as Map<String, dynamic>);
     return ResultSuccess<ChatMessage>(msg);
+  }
+
+  /// Đánh dấu tất cả tin nhắn của người khác trong conversation là đã đọc.
+  Future<Result<List<String>>> markRead(String conversationId) async {
+    final res = await _api.post('/conversations/$conversationId/read');
+    return switch (res) {
+      ResultSuccess(data: final d) => ResultSuccess<List<String>>(
+          ((d['data']?['messageIds'] as List?) ?? []).map((e) => e.toString()).toList(),
+        ),
+      FailureResult(failure: final f) => FailureResult<List<String>>(f),
+    };
   }
 
   // E4 — auto-create conversation (or get existing)

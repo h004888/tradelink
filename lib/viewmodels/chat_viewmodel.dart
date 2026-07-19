@@ -1,13 +1,16 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../core/result.dart';
 import '../../core/ui_state.dart';
 import '../../repositories/chat_repository.dart';
+import '../../repositories/upload_repository.dart';
 import '../../services/chat_socket.dart';
 
 class ChatViewModel extends ChangeNotifier {
   final ChatRepository _repository = ChatRepository();
+  final UploadRepository _uploadRepo = UploadRepository();
   final ChatSocket _socket = ChatSocket.instance;
   final String conversationId;
   final String? offerListingId;
@@ -23,12 +26,18 @@ class ChatViewModel extends ChangeNotifier {
   UiState<void> _sendState = const Idle();
   UiState<void> get sendState => _sendState;
 
+  /// Trạng thái upload ảnh đính kèm
+  UiState<void> _imageUploadState = const Idle();
+  UiState<void> get imageUploadState => _imageUploadState;
+
   StreamSubscription<ChatMessage>? _socketSub;
+  StreamSubscription<ReadReceipt>? _readSub;
   bool _disposed = false;
 
   ChatViewModel({required this.conversationId, this.offerListingId}) {
     load();
     _subscribeRealtime();
+    _subscribeReadReceipts();
   }
 
   void _subscribeRealtime() {
@@ -41,6 +50,27 @@ class ChatViewModel extends ChangeNotifier {
       _messages.add(msg);
       _state = Success(List.from(_messages));
       notifyListeners();
+      // Chat đang mở → coi như user vừa thấy tin nhắn mới này ngay
+      _socket.markRead(conversationId);
+    });
+  }
+
+  void _subscribeReadReceipts() {
+    _readSub?.cancel();
+    _readSub = _socket.watchRead(conversationId).listen((receipt) {
+      if (_disposed || receipt.messageIds.isEmpty) return;
+      var changed = false;
+      for (var i = 0; i < _messages.length; i++) {
+        final m = _messages[i];
+        if (receipt.messageIds.contains(m.id) && !m.readBy.contains(receipt.readerId)) {
+          _messages[i] = m.copyWithReadBy([...m.readBy, receipt.readerId]);
+          changed = true;
+        }
+      }
+      if (changed) {
+        _state = Success(List.from(_messages));
+        notifyListeners();
+      }
     });
   }
 
@@ -60,6 +90,9 @@ class ChatViewModel extends ChangeNotifier {
         ..clear()
         ..addAll(result.data);
       _state = Success(List.from(_messages));
+      // Mở chat → đánh dấu đã đọc tin nhắn của người khác
+      _socket.markRead(conversationId);
+      _repository.markRead(conversationId);
     } else if (result is FailureResult<List<ChatMessage>>) {
       _state = Error(message: result.failure.message, retryable: true);
     }
@@ -68,8 +101,8 @@ class ChatViewModel extends ChangeNotifier {
 
   /// Gửi message — HTTP là primary path (reliable), socket là bonus để broadcast nhanh hơn.
   /// Sau khi HTTP trả về 201, message được thêm vào local list NGAY để UX mượt.
-  Future<bool> sendMessage(String text) async {
-    if (text.isEmpty) return false;
+  Future<bool> sendMessage(String text, {String? imageUrl}) async {
+    if (text.isEmpty && imageUrl == null) return false;
     final isOffer = _sendAsOffer;
     final offerId = isOffer ? offerListingId : null;
 
@@ -82,6 +115,7 @@ class ChatViewModel extends ChangeNotifier {
       text,
       isOffer: isOffer,
       offerListingId: offerId,
+      imageUrl: imageUrl,
     );
 
     if (_disposed) return false;
@@ -110,10 +144,31 @@ class ChatViewModel extends ChangeNotifier {
     return false;
   }
 
+  /// Upload ảnh được chọn rồi gửi như 1 message (không kèm text).
+  Future<bool> sendImage(XFile file) async {
+    _imageUploadState = const Loading();
+    notifyListeners();
+
+    final uploadResult = await _uploadRepo.uploadOne(file);
+    if (_disposed) return false;
+
+    if (uploadResult is FailureResult<String>) {
+      _imageUploadState = Error(message: uploadResult.failure.message, retryable: true);
+      notifyListeners();
+      return false;
+    }
+
+    final url = (uploadResult as ResultSuccess<String>).data;
+    _imageUploadState = const Success(null);
+    notifyListeners();
+    return sendMessage('', imageUrl: url);
+  }
+
   @override
   void dispose() {
     _disposed = true;
     _socketSub?.cancel();
+    _readSub?.cancel();
     super.dispose();
   }
 }

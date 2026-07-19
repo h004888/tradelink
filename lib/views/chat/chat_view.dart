@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/api_client.dart';
@@ -110,6 +111,42 @@ class _ChatBodyState extends State<_ChatBody> {
     // Build() sẽ tự detect count tăng → scroll hoặc badge.
   }
 
+  void _showImagePreview(BuildContext context, String url) {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(16),
+        child: GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: InteractiveViewer(
+            child: Image.network(
+              url,
+              errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined,
+                color: Colors.white, size: 48),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickAndSendImage(ChatViewModel vm) async {
+    if (vm.imageUploadState is Loading) return;
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1600,
+      imageQuality: 85,
+    );
+    if (picked == null) return;
+    final ok = await vm.sendImage(picked);
+    if (!ok && mounted && vm.imageUploadState is Error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text((vm.imageUploadState as Error).message)),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<ChatViewModel>();
@@ -219,16 +256,55 @@ class _ChatBodyState extends State<_ChatBody> {
                                       ),
                                     ),
                                   ),
-                                Text(
-                                  msg.text,
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    fontSize: 15,
-                                    color: isMe
-                                        ? Colors.white
-                                        : TradeLinkColors.onSurface,
-                                    height: 1.4,
+                                if (msg.imageUrl != null)
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(TradeLinkRadii.sm),
+                                    child: GestureDetector(
+                                      onTap: () => _showImagePreview(context, msg.imageUrl!),
+                                      child: Image.network(
+                                        msg.imageUrl!,
+                                        fit: BoxFit.cover,
+                                        width: 200,
+                                        height: 200,
+                                        errorBuilder: (_, _, _) => Container(
+                                          width: 200,
+                                          height: 200,
+                                          color: TradeLinkColors.surfaceContainerHigh,
+                                          alignment: Alignment.center,
+                                          child: const Icon(Icons.broken_image_outlined,
+                                            color: TradeLinkColors.outlineVariant),
+                                        ),
+                                      ),
+                                    ),
                                   ),
-                                ),
+                                if (msg.text.isNotEmpty)
+                                  Padding(
+                                    padding: EdgeInsets.only(top: msg.imageUrl != null ? TradeLinkSpacing.xs : 0),
+                                    child: Text(
+                                      msg.text,
+                                      style: theme.textTheme.bodyMedium?.copyWith(
+                                        fontSize: 15,
+                                        color: isMe
+                                            ? Colors.white
+                                            : TradeLinkColors.onSurface,
+                                        height: 1.4,
+                                      ),
+                                    ),
+                                  ),
+                                if (isMe)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 2),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          msg.isSeenByOther ? Icons.done_all : Icons.done,
+                                          size: 14,
+                                          color: Colors.white.withValues(alpha: msg.isSeenByOther ? 1.0 : 0.6),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                               ],
                             ),
                           ),
@@ -350,6 +426,20 @@ class _ChatBodyState extends State<_ChatBody> {
                             tooltip: 'Gửi kèm đề nghị',
                             onPressed: vm.toggleSendAsOffer,
                           ),
+                        IconButton(
+                          icon: vm.imageUploadState is Loading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Icon(Icons.image_outlined),
+                          color: TradeLinkColors.onSurfaceVariant,
+                          tooltip: 'Đính kèm ảnh',
+                          onPressed: vm.imageUploadState is Loading
+                              ? null
+                              : () => _pickAndSendImage(vm),
+                        ),
                         Expanded(
                           child: Container(
                             decoration: BoxDecoration(

@@ -10,6 +10,7 @@ class Offer {
   final String? buyerPhone;
   final double? price;
   final String? tradeItemDescription;
+  final double? cashTopUp;
   final OfferType type;
   final String message;
   final DateTime createdAt;
@@ -24,6 +25,7 @@ class Offer {
     this.buyerPhone,
     this.price,
     this.tradeItemDescription,
+    this.cashTopUp,
     required this.type,
     required this.message,
     required this.createdAt,
@@ -42,6 +44,7 @@ class Offer {
       buyerPhone: buyer?['phone'] as String?,
       price: (j['price'] as num?)?.toDouble(),
       tradeItemDescription: j['tradeItemDescription'] as String?,
+      cashTopUp: (j['cashTopUp'] as num?)?.toDouble(),
       type: (j['type']?.toString() == 'trade') ? OfferType.trade : OfferType.buy,
       message: j['message']?.toString() ?? '',
       createdAt: DateTime.tryParse(j['createdAt']?.toString() ?? '') ?? DateTime.now(),

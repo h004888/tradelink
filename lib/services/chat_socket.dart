@@ -5,6 +5,13 @@ import '../core/api_client.dart';
 import '../core/app_config.dart';
 import '../repositories/chat_repository.dart';
 
+/// Sự kiện "đã đọc" từ server — reader vừa đọc các messageIds trong 1 conversation.
+class ReadReceipt {
+  final String readerId;
+  final List<String> messageIds;
+  const ReadReceipt({required this.readerId, required this.messageIds});
+}
+
 /// Service kết nối socket.io tới backend chat realtime.
 /// Thay thế polling 5s bằng push event.
 class ChatSocket {
@@ -14,6 +21,7 @@ class ChatSocket {
 
   IO.Socket? _socket;
   final Map<String, StreamController<ChatMessage>> _controllers = {};
+  final Map<String, StreamController<ReadReceipt>> _readControllers = {};
 
   /// Mở socket nếu chưa có (idempotent). Tự reconnect khi mất kết nối.
   void connect() {
@@ -59,6 +67,17 @@ class ChatSocket {
       if (ctl == null || ctl.isClosed) return;
       ctl.add(_parse(data));
     });
+    _socket!.on('message:read', (data) {
+      if (data is! Map) return;
+      final convId = data['conversationId']?.toString();
+      if (convId == null) return;
+      final ctl = _readControllers[convId];
+      if (ctl == null || ctl.isClosed) return;
+      ctl.add(ReadReceipt(
+        readerId: data['readerId']?.toString() ?? '',
+        messageIds: ((data['messageIds'] as List?) ?? []).map((e) => e.toString()).toList(),
+      ));
+    });
     _socket!.connect();
   }
 
@@ -78,7 +97,7 @@ class ChatSocket {
   /// Gửi message realtime qua socket (kèm `sendAsOffer` flag).
   /// Trả về Future<void> khi ack từ server.
   Future<bool> sendRealtime(String conversationId, String text,
-      {bool isOffer = false, String? offerListingId}) async {
+      {bool isOffer = false, String? offerListingId, String? imageUrl}) async {
     connect();
     final s = _socket;
     if (s == null) return false;
@@ -90,6 +109,7 @@ class ChatSocket {
         'text': text,
         'isOffer': isOffer,
         'offerListingId': offerListingId,
+        'imageUrl': imageUrl,
       },
       ack: (ack) {
         final ok = ack is Map && ack['success'] == true;
@@ -99,11 +119,29 @@ class ChatSocket {
     return completer.future.timeout(const Duration(seconds: 5), onTimeout: () => false);
   }
 
+  /// Theo dõi sự kiện "đã đọc" cho 1 conversation (người khác vừa đọc tin của mình).
+  Stream<ReadReceipt> watchRead(String conversationId) {
+    connect();
+    return _readControllers
+        .putIfAbsent(conversationId, () => StreamController<ReadReceipt>.broadcast())
+        .stream;
+  }
+
+  /// Báo cho server biết mình vừa đọc hết tin nhắn trong conversation này.
+  void markRead(String conversationId) {
+    connect();
+    _socket?.emit('read', {'conversationId': conversationId});
+  }
+
   void dispose() {
     for (var c in _controllers.values) {
       c.close();
     }
     _controllers.clear();
+    for (var c in _readControllers.values) {
+      c.close();
+    }
+    _readControllers.clear();
     _socket?.dispose();
     _socket = null;
     _instance = null;
@@ -114,6 +152,7 @@ class ChatSocket {
         senderId: d['senderId']?.toString() ?? '',
         senderName: d['senderName']?.toString() ?? '',
         text: d['text']?.toString() ?? '',
+        imageUrl: d['imageUrl']?.toString(),
         timestamp: DateTime.tryParse(d['createdAt']?.toString() ?? '') ?? DateTime.now(),
         isOffer: d['isOffer'] == true,
         offerListingId: d['offerListingId']?.toString(),

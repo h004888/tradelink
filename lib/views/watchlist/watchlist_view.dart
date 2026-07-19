@@ -77,18 +77,33 @@ class _WatchlistBody extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    AspectRatio(
-                      aspectRatio: 1.0,
-                      child: ClipRRect(
-                        borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(TradeLinkRadii.lg),
+                    Stack(
+                      children: [
+                        AspectRatio(
+                          aspectRatio: 1.0,
+                          child: ClipRRect(
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(TradeLinkRadii.lg),
+                            ),
+                            child: _WatchlistImage(
+                              url: item.imageUrls.isNotEmpty
+                                  ? item.imageUrls.first
+                                  : null,
+                            ),
+                          ),
                         ),
-                        child: _WatchlistImage(
-                          url: item.imageUrls.isNotEmpty
-                              ? item.imageUrls.first
-                              : null,
+                        Positioned(
+                          top: TradeLinkSpacing.xs,
+                          right: TradeLinkSpacing.xs,
+                          child: _UnsaveButton(
+                            onPressed: item.id.isEmpty
+                                ? null
+                                : () => context
+                                    .read<WatchlistViewModel>()
+                                    .remove(item.id),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                     Padding(
                       padding: const EdgeInsets.all(TradeLinkSpacing.sm),
@@ -119,6 +134,32 @@ class _WatchlistBody extends StatelessWidget {
               );
             },
           ),
+    );
+  }
+}
+
+/// Nút bỏ lưu nổi trên góc ảnh — gọi trực tiếp WatchlistViewModel.remove()
+class _UnsaveButton extends StatelessWidget {
+  final VoidCallback? onPressed;
+  const _UnsaveButton({required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.black.withValues(alpha: 0.45),
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onPressed,
+        child: const Padding(
+          padding: EdgeInsets.all(6),
+          child: Icon(
+            Icons.bookmark_remove_outlined,
+            size: 18,
+            color: Colors.white,
+          ),
+        ),
+      ),
     );
   }
 }

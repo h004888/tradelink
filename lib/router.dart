@@ -298,6 +298,23 @@ class AppRouter {
         path: AppPaths.notifications,
         builder: (_, state) => const NotificationsView(),
       ),
+      // Top-level cho Send Offer / Create Order / Review — được mở từ ItemDetailView
+      // (top-level, ngoài shell) nên cần bản path tuyệt đối, không chỉ bản lồng trong branch.
+      GoRoute(
+        path: '${AppPaths.sendOffer}/:listingId',
+        builder: (_, state) => SendOfferView(listingId: state.pathParameters['listingId']!),
+      ),
+      GoRoute(
+        path: '${AppPaths.createOrder}/:listingId',
+        builder: (_, state) => CreateOrderView(listingId: state.pathParameters['listingId']!),
+      ),
+      GoRoute(
+        path: '${AppPaths.review}/:transactionId/:targetId',
+        builder: (_, state) => ReviewView(
+          transactionId: state.pathParameters['transactionId']!,
+          targetId: state.pathParameters['targetId']!,
+        ),
+      ),
       GoRoute(path: AppPaths.onboarding, builder: (_, state) => const OnboardingView()),
       GoRoute(path: AppPaths.login, builder: (_, state) => const LoginView()),
       GoRoute(path: AppPaths.register, builder: (_, state) => const RegisterView()),

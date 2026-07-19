@@ -5,6 +5,30 @@ import '../models/offer_model.dart';
 class OfferRepository {
   final _api = ApiClient.instance;
 
+  Future<Result<Offer>> create({
+    required String listingId,
+    required OfferType type,
+    required String message,
+    double? price,
+    String? tradeItemDescription,
+    double? cashTopUp,
+  }) async {
+    final res = await _api.post('/offers', body: {
+      'listingId': listingId,
+      'type': type == OfferType.trade ? 'trade' : 'buy',
+      'message': message,
+      'price': ?price,
+      if (tradeItemDescription != null && tradeItemDescription.isNotEmpty)
+        'tradeItemDescription': tradeItemDescription,
+      'cashTopUp': ?cashTopUp,
+    });
+    return switch (res) {
+      ResultSuccess(data: final d) =>
+        ResultSuccess<Offer>(Offer.fromJson(d['data'] as Map<String, dynamic>)),
+      FailureResult(failure: final f) => FailureResult<Offer>(f),
+    };
+  }
+
   Future<Result<List<Offer>>> getSentOffers() async {
     final me = await _api.get('/auth/me');
     if (me is FailureResult<Map<String, dynamic>>) {
