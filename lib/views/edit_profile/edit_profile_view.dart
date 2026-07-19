@@ -49,13 +49,13 @@ class _EditProfileBody extends StatelessWidget {
             actionLabel: 'Thử lại',
             onAction: vm.load,
           ),
-        Success(data: final profile) => _buildForm(context, vm, profile.avatarUrl),
+        Success(data: final profile) => _buildForm(context, vm, profile.avatar),
         _ => const SizedBox.shrink(),
       },
     );
   }
 
-  Widget _buildForm(BuildContext context, EditProfileViewModel vm, String? avatarUrl) {
+  Widget _buildForm(BuildContext context, EditProfileViewModel vm, String? avatar) {
     final theme = Theme.of(context);
     return SingleChildScrollView(
       padding: const EdgeInsets.all(TradeLinkSpacing.marginMobile),
@@ -128,9 +128,9 @@ class _EditProfileBody extends StatelessWidget {
                         width: 2,
                       ),
                     ),
-                    child: avatarUrl != null
+                    child: avatar != null
                         ? Image.network(
-                            avatarUrl,
+                            avatar,
                             fit: BoxFit.cover,
                             width: 96,
                             height: 96,
@@ -179,13 +179,24 @@ class _EditProfileBody extends StatelessWidget {
           const SizedBox(height: TradeLinkSpacing.lg),
           // Form fields
           TextField(
-            controller: TextEditingController(text: vm.name),
+            controller: TextEditingController(text: vm.fullName),
             style: theme.textTheme.bodyLarge,
             decoration: const InputDecoration(
               labelText: 'Họ và tên',
               prefixIcon: Icon(Icons.person_outline),
             ),
-            onChanged: vm.onNameChanged,
+            onChanged: vm.onFullNameChanged,
+          ),
+          const SizedBox(height: TradeLinkSpacing.md),
+          TextField(
+            controller: TextEditingController(text: vm.phone),
+            style: theme.textTheme.bodyLarge,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(
+              labelText: 'Số điện thoại',
+              prefixIcon: Icon(Icons.phone_outlined),
+            ),
+            onChanged: vm.onPhoneChanged,
           ),
           const SizedBox(height: TradeLinkSpacing.md),
           // Địa chỉ với nút chọn bản đồ

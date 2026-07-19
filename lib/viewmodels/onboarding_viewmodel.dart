@@ -40,11 +40,11 @@ class OnboardingViewModel extends ChangeNotifier {
     controller.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
   }
 
-  void skip(BuildContext context) {
+  Future<void> skip(BuildContext context) async {
     debugPrint('[Onboarding] skip called');
     AnalyticsService.instance.track('onboarding_skipped');
     try {
-      StorageService.instance.setOnboardingDone();
+      await StorageService.instance.setOnboardingDone();
     } catch (e) {
       debugPrint('[Onboarding] setOnboardingDone error: $e');
     }
@@ -53,11 +53,11 @@ class OnboardingViewModel extends ChangeNotifier {
     context.go(AppPaths.home);
   }
 
-  void getStarted(BuildContext context) {
+  Future<void> getStarted(BuildContext context) async {
     debugPrint('[Onboarding] getStarted called');
     AnalyticsService.instance.track('onboarding_completed');
     try {
-      StorageService.instance.setOnboardingDone();
+      await StorageService.instance.setOnboardingDone();
     } catch (e) {
       debugPrint('[Onboarding] setOnboardingDone error: $e');
     }

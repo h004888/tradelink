@@ -13,26 +13,35 @@ class RegisterViewModel extends ChangeNotifier {
   String _name = '';
   String _email = '';
   String _password = '';
+  String _confirmPassword = '';
   String _phone = '';
   String _address = '';
   bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
   bool _isTermsAccepted = false;
 
   String get name => _name;
   String get email => _email;
   String get password => _password;
+  String get confirmPassword => _confirmPassword;
   String get phone => _phone;
   String get address => _address;
   bool get obscurePassword => _obscurePassword;
+  bool get obscureConfirmPassword => _obscureConfirmPassword;
   bool get isTermsAccepted => _isTermsAccepted;
 
   void onNameChanged(String value) => _name = value;
   void onEmailChanged(String value) => _email = value;
   void onPasswordChanged(String value) => _password = value;
+  void onConfirmPasswordChanged(String value) => _confirmPassword = value;
   void onPhoneChanged(String value) => _phone = value;
   void onAddressChanged(String value) => _address = value;
   void toggleObscure() {
     _obscurePassword = !_obscurePassword;
+    notifyListeners();
+  }
+  void toggleConfirmObscure() {
+    _obscureConfirmPassword = !_obscureConfirmPassword;
     notifyListeners();
   }
   void toggleTerms() {
@@ -49,6 +58,11 @@ class RegisterViewModel extends ChangeNotifier {
     }
     if (_email.isEmpty || _password.length < 6) {
       _state = Error(message: 'Vui lòng nhập đầy đủ thông tin. Mật khẩu tối thiểu 6 ký tự.', retryable: false);
+      notifyListeners();
+      return false;
+    }
+    if (_password != _confirmPassword) {
+      _state = Error(message: 'Mật khẩu xác nhận không khớp', retryable: false);
       notifyListeners();
       return false;
     }

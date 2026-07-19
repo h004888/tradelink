@@ -17,16 +17,18 @@ class EditProfileViewModel extends ChangeNotifier {
   UiState<void> _avatarState = const Idle();
   UiState<void> get avatarState => _avatarState;
 
-  String _name = '';
-  String get name => _name;
+  String _fullName = '';
+  String get fullName => _fullName;
+  String _phone = '';
+  String get phone => _phone;
   String _address = '';
   String get address => _address;
   double? _latitude;
   double? get latitude => _latitude;
   double? _longitude;
   double? get longitude => _longitude;
-  String? _avatarUrl;
-  String? get avatarUrl => _avatarUrl;
+  String? _avatar;
+  String? get avatar => _avatar;
 
   EditProfileViewModel() {
     load();
@@ -40,11 +42,12 @@ class EditProfileViewModel extends ChangeNotifier {
     final result = await _repository.getProfile();
     if (result is ResultSuccess<Profile>) {
       final p = result.data;
-      _name = p.name;
+      _fullName = p.fullName;
+      _phone = p.phone;
       _address = p.address ?? '';
       _latitude = p.latitude;
       _longitude = p.longitude;
-      _avatarUrl = p.avatarUrl;
+      _avatar = p.avatar;
       _loadState = Success(p);
     } else if (result is FailureResult<Profile>) {
       _loadState = Error(message: result.failure.message, retryable: true);
@@ -52,7 +55,8 @@ class EditProfileViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void onNameChanged(String v) => _name = v;
+  void onFullNameChanged(String v) => _fullName = v;
+  void onPhoneChanged(String v) => _phone = v;
   void onAddressChanged(String v) => _address = v;
 
   void setLocation(double lat, double lng, String address) {
@@ -74,7 +78,7 @@ class EditProfileViewModel extends ChangeNotifier {
     notifyListeners();
     final res = await _repository.uploadAvatar(userId, picked);
     if (res is ResultSuccess<Profile>) {
-      _avatarUrl = res.data.avatarUrl;
+      _avatar = res.data.avatar;
       _loadState = Success(res.data);
       _avatarState = const Success(null);
       notifyListeners();
@@ -100,11 +104,12 @@ class EditProfileViewModel extends ChangeNotifier {
     }
     final profile = s.data;
     final updated = profile.copyWith(
-      name: _name,
+      fullName: _fullName,
+      phone: _phone,
       address: _address,
       latitude: _latitude,
       longitude: _longitude,
-      avatarUrl: _avatarUrl,
+      avatar: _avatar,
     );
 
     final result = await _repository.updateProfile(updated);

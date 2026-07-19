@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../core/api_client.dart';
+import '../core/failure.dart';
 import '../core/result.dart';
 import '../core/ui_state.dart';
+import '../repositories/auth_repository.dart';
 import '../router.dart';
 import '../services/analytics_service.dart';
 import '../services/storage_service.dart';
 import '../utils/constants.dart';
 
 class SplashViewModel extends ChangeNotifier {
+  final AuthRepository _authRepository = AuthRepository();
+
   UiState<void> _state = const Loading();
   UiState<void> get state => _state;
 
@@ -100,7 +104,7 @@ class SplashViewModel extends ChangeNotifier {
     }
   }
 
-  void navigateNext(BuildContext context) {
+  Future<void> navigateNext(BuildContext context) async {
     if (_isMaintenanceMode) {
       // Nếu maintenance → hiển thị maintenance screen
       _state = Error(
@@ -116,9 +120,21 @@ class SplashViewModel extends ChangeNotifier {
 
     final token = ApiClient.instance.getToken();
     if (token != null) {
-      _navigateToDestination(context, isAuthenticated: true);
+      final session = await _authRepository.getCurrentUser();
+      if (session is ResultSuccess<Map<String, dynamic>>) {
+        _navigateToDestination(context, isAuthenticated: true);
+        return;
+      }
+
+      final failure = (session as FailureResult<Map<String, dynamic>>).failure;
+      if (failure is AuthFailure || failure is NetworkFailure || failure is ServerFailure) {
+        await ApiClient.instance.clearTokens();
+      }
+      if (context.mounted) {
+        context.go(AppPaths.login);
+      }
     } else {
-      _checkOnboarding(context);
+      await _checkOnboarding(context);
     }
   }
 

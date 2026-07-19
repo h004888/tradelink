@@ -15,6 +15,8 @@ class StorageService {
   static const _keyOnboardingDone = 'onboarding_done';
   static const _keyUserId = 'user_id';
   static const _keyRecentSearches = 'recent_searches';
+  static const _keyNotificationEnabled = 'settings_notifications_enabled';
+  static const _keySelectedLanguage = 'settings_selected_language';
 
   // ── Auth tokens ──
   Future<void> saveToken(String token) =>
@@ -64,4 +66,19 @@ class StorageService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(_keyRecentSearches, searches);
   }
+
+  // ── User settings ──
+  Future<void> saveNotificationEnabled(bool enabled) =>
+      _storage.write(key: _keyNotificationEnabled, value: enabled.toString());
+
+  Future<bool> getNotificationEnabled() async {
+    final v = await _storage.read(key: _keyNotificationEnabled);
+    return v == null ? true : v == 'true';
+  }
+
+  Future<void> saveSelectedLanguage(String language) =>
+      _storage.write(key: _keySelectedLanguage, value: language);
+
+  Future<String> getSelectedLanguage() async =>
+      await _storage.read(key: _keySelectedLanguage) ?? 'vi';
 }
