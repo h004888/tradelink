@@ -37,6 +37,7 @@ import 'views/transaction_sale/transaction_sale_view.dart';
 import 'views/transaction_trade/transaction_trade_view.dart';
 import 'views/create_order/create_order_view.dart';
 import 'views/notifications/notifications_view.dart';
+import 'views/wallet/wallet_view.dart';
 import 'views/dispute/dispute_view.dart';
 import 'views/review/review_view.dart';
 import 'views/admin_dashboard/admin_dashboard_view.dart';
@@ -80,6 +81,7 @@ class AppRouter {
     AppPaths.editListing,
     AppPaths.boostListing,
     AppPaths.draftListings,
+    AppPaths.wallet,
     AppPaths.transactions,
     AppPaths.chat,
     AppPaths.watchlist,
@@ -280,6 +282,7 @@ class AppRouter {
                 BoostListingView(listingId: state.pathParameters['id']!)),
               GoRoute(path: AppPaths.draftListings, builder: (_, state) => const DraftListingsView()),
               GoRoute(path: AppPaths.notifications, builder: (_, state) => const NotificationsView()),
+              GoRoute(path: AppPaths.wallet, builder: (_, state) => const WalletView()),
             ],
           ),
         ],

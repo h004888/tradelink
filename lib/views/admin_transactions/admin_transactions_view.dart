@@ -3,7 +3,9 @@ import 'package:provider/provider.dart';
 
 import '../../core/result.dart';
 import '../../core/ui_state.dart';
+import '../../models/wallet_model.dart';
 import '../../repositories/admin_repository.dart';
+import '../../utils/format.dart';
 import '../../utils/theme.dart';
 import '../../widgets/admin_bottom_nav.dart';
 import '../../widgets/empty_state.dart';
@@ -28,15 +30,19 @@ class _AdminTxVM extends ChangeNotifier {
   UiState<List<AdminTransactionItem>> _state = const Loading();
   UiState<List<AdminTransactionItem>> get state => _state;
 
-  UiState<List<PendingPayoutItem>> _payoutsState = const Loading();
-  UiState<List<PendingPayoutItem>> get payoutsState => _payoutsState;
+  UiState<List<WithdrawalRequestItem>> _withdrawalsState = const Loading();
+  UiState<List<WithdrawalRequestItem>> get withdrawalsState => _withdrawalsState;
 
-  final Set<String> _markingPaid = {};
-  bool isMarkingPaid(String id) => _markingPaid.contains(id);
+  UiState<WalletOverview> _overviewState = const Loading();
+  UiState<WalletOverview> get overviewState => _overviewState;
+
+  final Set<String> _processing = {};
+  bool isProcessing(String id) => _processing.contains(id);
 
   _AdminTxVM() {
     load();
-    loadPayouts();
+    loadWithdrawals();
+    loadOverview();
   }
 
   Future<void> load() async {
@@ -52,26 +58,52 @@ class _AdminTxVM extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> loadPayouts() async {
-    _payoutsState = const Loading();
+  Future<void> loadWithdrawals() async {
+    _withdrawalsState = const Loading();
     notifyListeners();
-    final res = await _repository.getPendingPayouts();
+    final res = await _repository.getWithdrawals(status: 'pending');
     switch (res) {
-      case ResultSuccess<List<PendingPayoutItem>>(:final data):
-        _payoutsState = Success(data);
-      case FailureResult<List<PendingPayoutItem>>(:final failure):
-        _payoutsState = Error(message: failure.message, retryable: true);
+      case ResultSuccess<List<WithdrawalRequestItem>>(:final data):
+        _withdrawalsState = Success(data);
+      case FailureResult<List<WithdrawalRequestItem>>(:final failure):
+        _withdrawalsState = Error(message: failure.message, retryable: true);
     }
     notifyListeners();
   }
 
-  Future<bool> markPaid(String transactionId) async {
-    _markingPaid.add(transactionId);
+  Future<void> loadOverview() async {
+    _overviewState = const Loading();
     notifyListeners();
-    final res = await _repository.markPayoutPaid(transactionId);
-    _markingPaid.remove(transactionId);
+    final res = await _repository.getWalletOverview();
+    switch (res) {
+      case ResultSuccess<WalletOverview>(:final data):
+        _overviewState = Success(data);
+      case FailureResult<WalletOverview>(:final failure):
+        _overviewState = Error(message: failure.message, retryable: true);
+    }
+    notifyListeners();
+  }
+
+  Future<bool> approve(String withdrawalId) async {
+    _processing.add(withdrawalId);
+    notifyListeners();
+    final res = await _repository.approveWithdrawal(withdrawalId);
+    _processing.remove(withdrawalId);
     if (res is ResultSuccess<bool>) {
-      await loadPayouts();
+      await Future.wait([loadWithdrawals(), loadOverview()]);
+      return true;
+    }
+    notifyListeners();
+    return false;
+  }
+
+  Future<bool> reject(String withdrawalId, {String? note}) async {
+    _processing.add(withdrawalId);
+    notifyListeners();
+    final res = await _repository.rejectWithdrawal(withdrawalId, note: note);
+    _processing.remove(withdrawalId);
+    if (res is ResultSuccess<bool>) {
+      await Future.wait([loadWithdrawals(), loadOverview()]);
       return true;
     }
     notifyListeners();
@@ -105,7 +137,7 @@ class _BodyState extends State<_Body> with SingleTickerProviderStateMixin {
   Widget build(BuildContext context) {
     final vm = context.watch<_AdminTxVM>();
 
-    final pendingCount = switch (vm.payoutsState) {
+    final pendingCount = switch (vm.withdrawalsState) {
       Success(data: final d) => d.length,
       _ => 0,
     };
@@ -130,7 +162,7 @@ class _BodyState extends State<_Body> with SingleTickerProviderStateMixin {
           indicatorColor: TradeLinkColors.primary,
           tabs: [
             const Tab(text: 'Tất cả'),
-            Tab(text: pendingCount > 0 ? 'Cần thanh toán ($pendingCount)' : 'Cần thanh toán'),
+            Tab(text: pendingCount > 0 ? 'Yêu cầu rút tiền ($pendingCount)' : 'Yêu cầu rút tiền'),
           ],
         ),
       ),
@@ -139,7 +171,7 @@ class _BodyState extends State<_Body> with SingleTickerProviderStateMixin {
         controller: _tabController,
         children: [
           _AllTransactionsTab(vm: vm),
-          _PendingPayoutsTab(vm: vm),
+          _WithdrawalRequestsTab(vm: vm),
         ],
       ),
     );
@@ -224,57 +256,121 @@ class _AllTransactionsTab extends StatelessWidget {
   }
 }
 
-class _PendingPayoutsTab extends StatelessWidget {
+class _WithdrawalRequestsTab extends StatelessWidget {
   final _AdminTxVM vm;
-  const _PendingPayoutsTab({required this.vm});
+  const _WithdrawalRequestsTab({required this.vm});
 
   @override
   Widget build(BuildContext context) {
-    return switch (vm.payoutsState) {
-      Loading() => const Center(
-          child: SizedBox(
-            width: 28,
-            height: 28,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
+    return Column(
+      children: [
+        _OverviewRow(vm: vm),
+        Expanded(
+          child: switch (vm.withdrawalsState) {
+            Loading() => const Center(
+                child: SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            Error(:final message) => EmptyState(
+                icon: Icons.cloud_off_outlined,
+                title: 'Không tải được danh sách',
+                message: message,
+                actionLabel: 'Thử lại',
+                onAction: vm.loadWithdrawals,
+              ),
+            Success(:final data) when data.isEmpty => const EmptyState(
+                icon: Icons.check_circle_outline,
+                title: 'Không có yêu cầu nào',
+                message: 'Các yêu cầu rút tiền của người bán sẽ hiển thị ở đây.',
+              ),
+            Success(:final data) => RefreshIndicator(
+                onRefresh: vm.loadWithdrawals,
+                child: ListView.separated(
+                  padding: const EdgeInsets.all(TradeLinkSpacing.marginMobile),
+                  itemCount: data.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: TradeLinkSpacing.sm),
+                  itemBuilder: (_, i) => _WithdrawalCard(item: data[i], vm: vm),
+                ),
+              ),
+            _ => const SizedBox.shrink(),
+          },
         ),
-      Error(:final message) => EmptyState(
-          icon: Icons.cloud_off_outlined,
-          title: 'Không tải được danh sách',
-          message: message,
-          actionLabel: 'Thử lại',
-          onAction: vm.loadPayouts,
-        ),
-      Success(:final data) when data.isEmpty => const EmptyState(
-          icon: Icons.check_circle_outline,
-          title: 'Không có gì cần thanh toán',
-          message: 'Các giao dịch bán hàng đã hoàn tất, chờ chuyển khoản cho người bán sẽ hiển thị ở đây.',
-        ),
-      Success(:final data) => RefreshIndicator(
-          onRefresh: vm.loadPayouts,
-          child: ListView.separated(
-            padding: const EdgeInsets.all(TradeLinkSpacing.marginMobile),
-            itemCount: data.length,
-            separatorBuilder: (_, _) => const SizedBox(height: TradeLinkSpacing.sm),
-            itemBuilder: (_, i) => _PayoutCard(item: data[i], vm: vm),
-          ),
-        ),
-      _ => const SizedBox.shrink(),
-    };
+      ],
+    );
   }
 }
 
-class _PayoutCard extends StatelessWidget {
-  final PendingPayoutItem item;
+class _OverviewRow extends StatelessWidget {
   final _AdminTxVM vm;
-  const _PayoutCard({required this.item, required this.vm});
+  const _OverviewRow({required this.vm});
 
-  bool get _hasBankInfo => (item.bankAccountNumber ?? '').isNotEmpty;
+  @override
+  Widget build(BuildContext context) {
+    final overview = switch (vm.overviewState) {
+      Success(data: final d) => d,
+      _ => null,
+    };
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        TradeLinkSpacing.marginMobile,
+        TradeLinkSpacing.md,
+        TradeLinkSpacing.marginMobile,
+        0,
+      ),
+      child: Row(
+        children: [
+          Expanded(child: _OverviewStat(label: 'Tổng số dư ví', value: overview?.totalBalance)),
+          const SizedBox(width: TradeLinkSpacing.sm),
+          Expanded(child: _OverviewStat(label: 'Đang chờ rút', value: overview?.totalPending)),
+          const SizedBox(width: TradeLinkSpacing.sm),
+          Expanded(child: _OverviewStat(label: 'Đã rút', value: overview?.totalPaidOut)),
+        ],
+      ),
+    );
+  }
+}
+
+class _OverviewStat extends StatelessWidget {
+  final String label;
+  final double? value;
+  const _OverviewStat({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return TradeLinkCard(
+      padding: const EdgeInsets.symmetric(horizontal: TradeLinkSpacing.sm, vertical: TradeLinkSpacing.sm),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: TradeLinkColors.onSurfaceVariant)),
+          const SizedBox(height: 2),
+          Text(
+            value != null ? formatVnd(value) : '—',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WithdrawalCard extends StatelessWidget {
+  final WithdrawalRequestItem item;
+  final _AdminTxVM vm;
+  const _WithdrawalCard({required this.item, required this.vm});
+
+  bool get _hasBankInfo => item.bankAccountNumber.isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isLoading = vm.isMarkingPaid(item.id);
+    final isLoading = vm.isProcessing(item.id);
 
     return TradeLinkCard(
       padding: const EdgeInsets.all(TradeLinkSpacing.md),
@@ -285,18 +381,20 @@ class _PayoutCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  item.listingTitle,
+                  item.userName ?? 'Không rõ',
                   style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
                 ),
               ),
-              TradeLinkText.money(_fmtAmount(item.amount), size: 'compact'),
+              TradeLinkText.money(formatVnd(item.amount), size: 'compact'),
             ],
           ),
-          const SizedBox(height: TradeLinkSpacing.xs),
-          Text(
-            'Người bán: ${item.sellerName}${item.sellerPhone != null ? ' • ${item.sellerPhone}' : ''}',
-            style: theme.textTheme.bodySmall?.copyWith(color: TradeLinkColors.onSurfaceVariant),
-          ),
+          if (item.userPhone != null) ...[
+            const SizedBox(height: TradeLinkSpacing.xs),
+            Text(
+              item.userPhone!,
+              style: theme.textTheme.bodySmall?.copyWith(color: TradeLinkColors.onSurfaceVariant),
+            ),
+          ],
           const SizedBox(height: TradeLinkSpacing.sm),
           Container(
             padding: const EdgeInsets.all(TradeLinkSpacing.sm),
@@ -308,9 +406,9 @@ class _PayoutCard extends StatelessWidget {
                 ? Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(item.bankName ?? 'Ngân hàng', style: theme.textTheme.bodySmall),
+                      Text(item.bankName, style: theme.textTheme.bodySmall),
                       Text(
-                        'STK: ${item.bankAccountNumber} — ${item.bankAccountHolder ?? ''}',
+                        'STK: ${item.bankAccountNumber} — ${item.bankAccountHolder}',
                         style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                       ),
                     ],
@@ -321,7 +419,7 @@ class _PayoutCard extends StatelessWidget {
                       const SizedBox(width: TradeLinkSpacing.xs),
                       Expanded(
                         child: Text(
-                          'Người bán chưa nhập thông tin ngân hàng — liên hệ trực tiếp để xin STK.',
+                          'Thiếu thông tin ngân hàng — liên hệ trực tiếp để xin STK.',
                           style: theme.textTheme.bodySmall?.copyWith(color: TradeLinkColors.error),
                         ),
                       ),
@@ -329,24 +427,39 @@ class _PayoutCard extends StatelessWidget {
                   ),
           ),
           const SizedBox(height: TradeLinkSpacing.md),
-          TradeLinkButton.primary(
-            label: isLoading ? 'Đang xử lý...' : 'Đánh dấu đã chuyển khoản',
-            fullWidth: true,
-            onPressed: isLoading ? null : () => _confirmAndMarkPaid(context),
+          Row(
+            children: [
+              Expanded(
+                child: TradeLinkButton.secondary(
+                  label: 'Từ chối',
+                  onPressed: isLoading ? null : () => _confirmAndReject(context),
+                ),
+              ),
+              const SizedBox(width: TradeLinkSpacing.sm),
+              Expanded(
+                flex: 2,
+                child: TradeLinkButton.primary(
+                  label: isLoading ? 'Đang xử lý...' : 'Duyệt & đã chuyển khoản',
+                  fullWidth: true,
+                  onPressed: isLoading ? null : () => _confirmAndApprove(context),
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Future<void> _confirmAndMarkPaid(BuildContext context) async {
+  Future<void> _confirmAndApprove(BuildContext context) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Xác nhận đã chuyển khoản'),
         content: Text(
-          'Bạn xác nhận đã tự chuyển ${_fmtAmount(item.amount)}đ cho ${item.sellerName} '
-          '(STK ${item.bankAccountNumber ?? '(chưa có)'}) chưa? Thao tác này không thể hoàn tác.',
+          'Bạn xác nhận đã tự chuyển ${formatVnd(item.amount)} cho ${item.userName ?? 'người dùng'} '
+          '(STK ${item.bankAccountNumber.isNotEmpty ? item.bankAccountNumber : '(chưa có)'}) chưa? '
+          'Thao tác này không thể hoàn tác.',
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Huỷ')),
@@ -356,19 +469,46 @@ class _PayoutCard extends StatelessWidget {
     );
     if (confirm != true || !context.mounted) return;
 
-    final ok = await vm.markPaid(item.id);
+    final ok = await vm.approve(item.id);
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(ok ? 'Đã đánh dấu thanh toán thành công' : 'Có lỗi xảy ra, thử lại')),
+        SnackBar(content: Text(ok ? 'Đã duyệt yêu cầu rút tiền' : 'Có lỗi xảy ra, thử lại')),
       );
     }
   }
 
-  String _fmtAmount(double a) {
-    if (a <= 0) return '0';
-    return a.toStringAsFixed(0).replaceAllMapped(
-          RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
-          (m) => '${m[1]}.',
-        );
+  Future<void> _confirmAndReject(BuildContext context) async {
+    final noteController = TextEditingController();
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Từ chối yêu cầu rút tiền'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Số dư sẽ được hoàn lại vào ví người dùng. Vui lòng nhập lý do (tuỳ chọn):'),
+            const SizedBox(height: TradeLinkSpacing.sm),
+            TextField(
+              controller: noteController,
+              decoration: const InputDecoration(hintText: 'Lý do từ chối'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Huỷ')),
+          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Từ chối')),
+        ],
+      ),
+    );
+    if (confirm != true || !context.mounted) return;
+
+    final note = noteController.text.trim();
+    final ok = await vm.reject(item.id, note: note.isEmpty ? null : note);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(ok ? 'Đã từ chối yêu cầu' : 'Có lỗi xảy ra, thử lại')),
+      );
+    }
   }
 }

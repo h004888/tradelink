@@ -1,5 +1,6 @@
 import '../core/api_client.dart';
 import '../core/result.dart';
+import '../models/wallet_model.dart';
 
 class Dispute {
   final String id;
@@ -155,44 +156,6 @@ class AdminTransactionItem {
   );
 }
 
-class PendingPayoutItem {
-  final String id;
-  final String listingTitle;
-  final double amount;
-  final String sellerName;
-  final String? sellerPhone;
-  final String? bankName;
-  final String? bankAccountNumber;
-  final String? bankAccountHolder;
-  final DateTime updatedAt;
-
-  const PendingPayoutItem({
-    required this.id,
-    required this.listingTitle,
-    required this.amount,
-    required this.sellerName,
-    this.sellerPhone,
-    this.bankName,
-    this.bankAccountNumber,
-    this.bankAccountHolder,
-    required this.updatedAt,
-  });
-
-  factory PendingPayoutItem.fromJson(Map<String, dynamic> j) {
-    final seller = j['sellerId'] is Map ? j['sellerId'] as Map : const {};
-    return PendingPayoutItem(
-      id: j['_id']?.toString() ?? '',
-      listingTitle: j['listingTitle']?.toString() ?? '',
-      amount: (j['amount'] as num?)?.toDouble() ?? 0,
-      sellerName: seller['fullName']?.toString() ?? 'Không rõ',
-      sellerPhone: seller['phone'] as String?,
-      bankName: seller['bankName'] as String?,
-      bankAccountNumber: seller['bankAccountNumber'] as String?,
-      bankAccountHolder: seller['bankAccountHolder'] as String?,
-      updatedAt: DateTime.tryParse(j['updatedAt']?.toString() ?? '') ?? DateTime.now(),
-    );
-  }
-}
 
 class AdminRepository {
   final _api = ApiClient.instance;
@@ -225,18 +188,34 @@ class AdminRepository {
     };
   }
 
-  Future<Result<List<PendingPayoutItem>>> getPendingPayouts() async {
-    final res = await _api.get('/admin/payouts');
+  Future<Result<WalletOverview>> getWalletOverview() async {
+    final res = await _api.get('/admin/wallet/overview');
     return switch (res) {
-      ResultSuccess(data: final d) => ResultSuccess<List<PendingPayoutItem>>(
-          ((d['data'] as List?) ?? []).map((e) => PendingPayoutItem.fromJson(e as Map<String, dynamic>)).toList(),
-        ),
-      FailureResult(failure: final f) => FailureResult<List<PendingPayoutItem>>(f),
+      ResultSuccess(data: final d) => ResultSuccess<WalletOverview>(WalletOverview.fromJson(d['data'] as Map<String, dynamic>)),
+      FailureResult(failure: final f) => FailureResult<WalletOverview>(f),
     };
   }
 
-  Future<Result<bool>> markPayoutPaid(String transactionId) async {
-    final res = await _api.patch('/admin/payouts/$transactionId/mark-paid');
+  Future<Result<List<WithdrawalRequestItem>>> getWithdrawals({String? status}) async {
+    final res = await _api.get('/admin/wallet/withdrawals', query: status != null ? {'status': status} : null);
+    return switch (res) {
+      ResultSuccess(data: final d) => ResultSuccess<List<WithdrawalRequestItem>>(
+          ((d['data'] as List?) ?? []).map((e) => WithdrawalRequestItem.fromJson(e as Map<String, dynamic>)).toList(),
+        ),
+      FailureResult(failure: final f) => FailureResult<List<WithdrawalRequestItem>>(f),
+    };
+  }
+
+  Future<Result<bool>> approveWithdrawal(String id) async {
+    final res = await _api.patch('/admin/wallet/withdrawals/$id/approve');
+    return switch (res) {
+      ResultSuccess() => ResultSuccess<bool>(true),
+      FailureResult(failure: final f) => FailureResult<bool>(f),
+    };
+  }
+
+  Future<Result<bool>> rejectWithdrawal(String id, {String? note}) async {
+    final res = await _api.patch('/admin/wallet/withdrawals/$id/reject', body: {'note': ?note});
     return switch (res) {
       ResultSuccess() => ResultSuccess<bool>(true),
       FailureResult(failure: final f) => FailureResult<bool>(f),
