@@ -278,6 +278,22 @@ class ListingRepository {
     };
   }
 
+  Future<Result<Listing>> hideListing(String id) async {
+    final res = await _api.put('/listings/$id', body: {'status': 'hidden'});
+    return switch (res) {
+      ResultSuccess(data: final d) => ResultSuccess<Listing>(_fromJson(d['data'] as Map<String, dynamic>)),
+      FailureResult(failure: final f) => FailureResult<Listing>(f),
+    };
+  }
+
+  Future<Result<Listing>> unhideListing(String id) async {
+    final res = await _api.put('/listings/$id', body: {'status': 'active'});
+    return switch (res) {
+      ResultSuccess(data: final d) => ResultSuccess<Listing>(_fromJson(d['data'] as Map<String, dynamic>)),
+      FailureResult(failure: final f) => FailureResult<Listing>(f),
+    };
+  }
+
   Future<Result<Listing>> boostListing(String id, int days) async {
     final res = await _api.post('/listings/$id/boost', body: {'days': days});
     return switch (res) {

@@ -193,7 +193,7 @@ class CreateListingViewModel extends ChangeNotifier {
     return null;
   }
 
-  Future<void> saveDraft() async {
+  Future<bool> saveDraft() async {
     final prefs = await SharedPreferences.getInstance();
     final draftList = prefs.getStringList('draft_listings') ?? [];
     
@@ -232,6 +232,7 @@ class CreateListingViewModel extends ChangeNotifier {
     
     _state = const Idle();
     notifyListeners();
+    return true;
   }
 
   void reset() {
