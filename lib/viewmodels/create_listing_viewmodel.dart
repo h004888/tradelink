@@ -7,6 +7,8 @@ import '../../core/ui_state.dart';
 import '../../models/listing_model.dart';
 import '../../repositories/listing_repository.dart';
 import '../../repositories/upload_repository.dart';
+import '../../core/events.dart';
+import '../../core/api_client.dart';
 
 class CreateListingViewModel extends ChangeNotifier {
   final ListingRepository _repository = ListingRepository();
@@ -138,7 +140,7 @@ class CreateListingViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> publish() async {
+  Future<Listing?> publish() async {
     bool hasError = false;
     
     if (_title.isEmpty) { _titleError = 'Vui lòng nhập tiêu đề'; hasError = true; } else _titleError = null;
@@ -155,7 +157,7 @@ class CreateListingViewModel extends ChangeNotifier {
 
     if (hasError) {
       notifyListeners();
-      return false;
+      return null;
     }
 
     _state = const Loading();
@@ -171,23 +173,24 @@ class CreateListingViewModel extends ChangeNotifier {
       category: _category,
       condition: _condition,
       type: _type,
-      sellerId: 'user-001',
+      sellerId: ApiClient.instance.getUserId() ?? 'unknown-user',
       sellerName: 'Nguyễn Minh Khôi',
       createdAt: DateTime.now(),
     );
 
     final result = await _repository.createListing(listing);
     if (result is ResultSuccess<Listing>) {
+      EventBus.fireListingCreated(result.data);
       _state = Success(result.data);
       notifyListeners();
-      return true;
+      return result.data;
     }
     if (result is FailureResult<Listing>) {
       _state = Error(message: result.failure.message, retryable: true);
       notifyListeners();
-      return false;
+      return null;
     }
-    return false;
+    return null;
   }
 
   Future<void> saveDraft() async {
@@ -227,6 +230,25 @@ class CreateListingViewModel extends ChangeNotifier {
     
     await prefs.setStringList('draft_listings', draftList);
     
+    _state = const Idle();
+    notifyListeners();
+  }
+
+  void reset() {
+    _type = ListingType.sale;
+    _title = '';
+    _titleError = null;
+    _description = '';
+    _descriptionError = null;
+    _price = null;
+    _priceError = null;
+    _exchangeFor = null;
+    _exchangeForError = null;
+    _category = 'Điện tử';
+    _condition = ItemCondition.used;
+    _imageUrls.clear();
+    _localImages.clear();
+    _imageError = null;
     _state = const Idle();
     notifyListeners();
   }

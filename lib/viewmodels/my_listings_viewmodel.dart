@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../core/result.dart';
 import '../../core/ui_state.dart';
 import '../../models/listing_model.dart';
+import '../../core/events.dart';
 import '../../repositories/listing_repository.dart';
 
 class MyListingsViewModel extends ChangeNotifier {
@@ -19,7 +21,18 @@ class MyListingsViewModel extends ChangeNotifier {
     return const [];
   }
 
-  MyListingsViewModel() { loadListings(); }
+  StreamSubscription? _listingDeletedSub;
+
+  MyListingsViewModel() { 
+    loadListings(); 
+    _listingDeletedSub = EventBus.onListingDeleted.listen(removeListing);
+  }
+
+  @override
+  void dispose() {
+    _listingDeletedSub?.cancel();
+    super.dispose();
+  }
 
   Future<void> loadListings() async {
     _state = const Loading();
@@ -33,5 +46,18 @@ class MyListingsViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setFilter(ListingStatus f) { _filter = f; loadListings(); }
+  void setFilter(ListingStatus status) {
+    if (_filter == status) return;
+    _filter = status;
+    loadListings();
+  }
+
+  void removeListing(String id) {
+    if (_state is Success<List<Listing>>) {
+      final currentList = (_state as Success<List<Listing>>).data;
+      final updatedList = currentList.where((l) => l.id != id).toList();
+      _state = Success(updatedList);
+      notifyListeners();
+    }
+  }
 }

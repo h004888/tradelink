@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -11,6 +12,7 @@ import '../../repositories/listing_repository.dart';
 import '../../repositories/transaction_repository.dart';
 import '../../services/analytics_service.dart';
 import '../../utils/constants.dart';
+import '../../core/events.dart';
 
 class HomeViewModel extends ChangeNotifier {
   final ListingRepository _listingRepo = ListingRepository();
@@ -48,8 +50,21 @@ class HomeViewModel extends ChangeNotifier {
   String? get loadMoreError => _loadMoreError;
 
   static const int _maxPage = 50;
+  StreamSubscription? _listingCreatedSub;
+  StreamSubscription? _listingDeletedSub;
 
-  HomeViewModel() { load(); }
+  HomeViewModel() { 
+    load(); 
+    _listingCreatedSub = EventBus.onListingCreated.listen(insertListing);
+    _listingDeletedSub = EventBus.onListingDeleted.listen(removeListing);
+  }
+
+  @override
+  void dispose() {
+    _listingCreatedSub?.cancel();
+    _listingDeletedSub?.cancel();
+    super.dispose();
+  }
 
   Future<void> load() async {
     AnalyticsService.instance.track('home_viewed');
@@ -123,6 +138,23 @@ class HomeViewModel extends ChangeNotifier {
   Future<void> retryLoadMore() async {
     if (_loadMoreError != null) {
       await loadMore();
+    }
+  }
+
+  void insertListing(Listing listing) {
+    if (_feedState is Success<List<Listing>>) {
+      final currentList = (_feedState as Success<List<Listing>>).data;
+      _feedState = Success([listing, ...currentList]);
+      notifyListeners();
+    }
+  }
+
+  void removeListing(String id) {
+    if (_feedState is Success<List<Listing>>) {
+      final currentList = (_feedState as Success<List<Listing>>).data;
+      final updatedList = currentList.where((l) => l.id != id).toList();
+      _feedState = Success(updatedList);
+      notifyListeners();
     }
   }
 
