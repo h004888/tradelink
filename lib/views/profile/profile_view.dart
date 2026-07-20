@@ -274,6 +274,13 @@ class _ProfileBody extends StatelessWidget {
                 const Divider(height: 1, indent: 56, color: TradeLinkColors.cardDivider),
                 _menuItem(
                   context,
+                  Icons.drafts_outlined,
+                  'Nháp tin đăng',
+                  onTap: () => context.push(AppPaths.draftListings),
+                ),
+                const Divider(height: 1, indent: 56, color: TradeLinkColors.cardDivider),
+                _menuItem(
+                  context,
                   Icons.edit_outlined,
                   'Chỉnh sửa hồ sơ',
                   onTap: () async {

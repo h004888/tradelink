@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'core/api_client.dart';
+import 'models/listing_model.dart';
 import 'utils/constants.dart';
 import 'views/onboarding/onboarding_view.dart';
 import 'views/login/login_view.dart';
@@ -382,7 +383,10 @@ class AppRouter {
         final email = state.uri.queryParameters['email'] ?? '';
         return VerifyOTPView(email: email);
       }),
-      GoRoute(path: AppPaths.createListing, builder: (_, state) => const CreateListingView()),
+      GoRoute(path: AppPaths.createListing, builder: (_, state) {
+        final draft = state.extra as Listing?;
+        return CreateListingView(draft: draft);
+      }),
       GoRoute(path: '/trust-and-safety', builder: (_, state) => const TrustAndSafetyView()),
     ],
   );
