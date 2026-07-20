@@ -4,6 +4,7 @@ import 'package:socket_io_client/socket_io_client.dart' as IO;
 import '../core/api_client.dart';
 import '../core/app_config.dart';
 import '../repositories/chat_repository.dart';
+import '../repositories/notification_repository.dart';
 
 /// Sự kiện "đã đọc" từ server — reader vừa đọc các messageIds trong 1 conversation.
 class ReadReceipt {
@@ -22,6 +23,8 @@ class ChatSocket {
   IO.Socket? _socket;
   final Map<String, StreamController<ChatMessage>> _controllers = {};
   final Map<String, StreamController<ReadReceipt>> _readControllers = {};
+  final StreamController<AppNotification> _notificationController =
+      StreamController<AppNotification>.broadcast();
 
   /// Mở socket nếu chưa có (idempotent). Tự reconnect khi mất kết nối.
   void connect() {
@@ -73,12 +76,32 @@ class ChatSocket {
       if (convId == null) return;
       final ctl = _readControllers[convId];
       if (ctl == null || ctl.isClosed) return;
-      ctl.add(ReadReceipt(
-        readerId: data['readerId']?.toString() ?? '',
-        messageIds: ((data['messageIds'] as List?) ?? []).map((e) => e.toString()).toList(),
-      ));
+      ctl.add(
+        ReadReceipt(
+          readerId: data['readerId']?.toString() ?? '',
+          messageIds: ((data['messageIds'] as List?) ?? [])
+              .map((e) => e.toString())
+              .toList(),
+        ),
+      );
     });
+    _socket!.on('notification:new', _handleNotification);
     _socket!.connect();
+  }
+
+  Stream<AppNotification> watchNotifications() {
+    connect();
+    return _notificationController.stream;
+  }
+
+  void emitNotificationForTest(Map<String, dynamic> data) =>
+      _handleNotification(data);
+
+  void _handleNotification(dynamic data) {
+    if (data is! Map || _notificationController.isClosed) return;
+    _notificationController.add(
+      NotificationRepository.parseForTest(Map<String, dynamic>.from(data)),
+    );
   }
 
   /// Theo dõi 1 conversation — trả về stream phát ra mỗi khi có message mới
@@ -96,8 +119,13 @@ class ChatSocket {
 
   /// Gửi message realtime qua socket (kèm `sendAsOffer` flag).
   /// Trả về Future<void> khi ack từ server.
-  Future<bool> sendRealtime(String conversationId, String text,
-      {bool isOffer = false, String? offerListingId, String? imageUrl}) async {
+  Future<bool> sendRealtime(
+    String conversationId,
+    String text, {
+    bool isOffer = false,
+    String? offerListingId,
+    String? imageUrl,
+  }) async {
     connect();
     final s = _socket;
     if (s == null) return false;
@@ -116,14 +144,20 @@ class ChatSocket {
         if (!completer.isCompleted) completer.complete(ok);
       },
     );
-    return completer.future.timeout(const Duration(seconds: 5), onTimeout: () => false);
+    return completer.future.timeout(
+      const Duration(seconds: 5),
+      onTimeout: () => false,
+    );
   }
 
   /// Theo dõi sự kiện "đã đọc" cho 1 conversation (người khác vừa đọc tin của mình).
   Stream<ReadReceipt> watchRead(String conversationId) {
     connect();
     return _readControllers
-        .putIfAbsent(conversationId, () => StreamController<ReadReceipt>.broadcast())
+        .putIfAbsent(
+          conversationId,
+          () => StreamController<ReadReceipt>.broadcast(),
+        )
         .stream;
   }
 
@@ -142,19 +176,21 @@ class ChatSocket {
       c.close();
     }
     _readControllers.clear();
+    _notificationController.close();
     _socket?.dispose();
     _socket = null;
     _instance = null;
   }
 
   ChatMessage _parse(Map d) => ChatMessage(
-        id: d['_id']?.toString() ?? '',
-        senderId: d['senderId']?.toString() ?? '',
-        senderName: d['senderName']?.toString() ?? '',
-        text: d['text']?.toString() ?? '',
-        imageUrl: d['imageUrl']?.toString(),
-        timestamp: DateTime.tryParse(d['createdAt']?.toString() ?? '') ?? DateTime.now(),
-        isOffer: d['isOffer'] == true,
-        offerListingId: d['offerListingId']?.toString(),
-      );
+    id: d['_id']?.toString() ?? '',
+    senderId: d['senderId']?.toString() ?? '',
+    senderName: d['senderName']?.toString() ?? '',
+    text: d['text']?.toString() ?? '',
+    imageUrl: d['imageUrl']?.toString(),
+    timestamp:
+        DateTime.tryParse(d['createdAt']?.toString() ?? '') ?? DateTime.now(),
+    isOffer: d['isOffer'] == true,
+    offerListingId: d['offerListingId']?.toString(),
+  );
 }
