@@ -369,7 +369,32 @@ class _CreateListingBody extends StatelessWidget {
                     label: 'Đăng tin ngay',
                     icon: Icons.rocket_launch_outlined,
                     isLoading: vm.state is ui.Loading,
-                    onPressed: vm.state is ui.Loading ? null : () async => await vm.publish(),
+                    onPressed: vm.state is ui.Loading ? null : () async {
+                      final success = await vm.publish();
+                      if (success != null && context.mounted) {
+                        vm.reset();
+                        showDialog(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            title: Row(
+                              children: [
+                                const Icon(Icons.check_circle_outline, color: TradeLinkColors.successGreen, size: 28),
+                                const SizedBox(width: 8),
+                                const Text('Đăng tin thành công!'),
+                              ],
+                            ),
+                            content: const Text('Món hàng của bạn đã được đưa lên sàn TradeLink. Chúc bạn giao dịch thành công nhé! 🎉'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx),
+                                child: const Text('Đóng'),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                    },
                   ),
                   if (vm.state is ui.Error) ...[
                     const SizedBox(height: TradeLinkSpacing.sm),

@@ -128,7 +128,7 @@ class ListingRepository {
       'exchangeFor': listing.exchangeFor,
       'imageUrls': listing.imageUrls,
       'category': listing.category,
-      'condition': listing.condition.name,
+      'condition': listing.condition.name.replaceAll('_', ''),
       'type': listing.type.name,
     });
     return switch (res) {
@@ -145,7 +145,7 @@ class ListingRepository {
       'exchangeFor': listing.exchangeFor,
       'imageUrls': listing.imageUrls,
       'category': listing.category,
-      'condition': listing.condition.name,
+      'condition': listing.condition.name.replaceAll('_', ''),
       'type': listing.type.name,
       'status': listing.status.name,
     });

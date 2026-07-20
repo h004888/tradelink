@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/result.dart';
 import '../../core/ui_state.dart';
+import '../../core/api_client.dart';
+import '../../core/events.dart';
 import '../../models/listing_model.dart';
 import '../../repositories/listing_repository.dart';
 import '../../utils/constants.dart';
@@ -26,7 +28,7 @@ class ListingDetailViewModel extends ChangeNotifier {
     switch (result) {
       case ResultSuccess(data: final l): 
         _state = Success(l);
-        _isOwner = l.sellerId == 'user-001';
+        _isOwner = l.sellerId == ApiClient.instance.getUserId();
       case FailureResult(failure: final f): _state = Error(message: f.message, retryable: true);
     }
     notifyListeners();
@@ -35,8 +37,13 @@ class ListingDetailViewModel extends ChangeNotifier {
   void edit(BuildContext context) => context.push('${AppPaths.editListing}/$listingId');
   void boost(BuildContext context) => context.push('${AppPaths.boostListing}/$listingId');
   
-  Future<void> delete(BuildContext context) async {
-    await _repository.deleteListing(listingId);
-    if (context.mounted) context.pop();
+  Future<bool> delete(BuildContext context) async {
+    try {
+      await _repository.deleteListing(listingId);
+      EventBus.fireListingDeleted(listingId);
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 }

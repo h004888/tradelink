@@ -277,10 +277,6 @@ class AppRouter {
               GoRoute(path: AppPaths.changePassword, builder: (_, state) => const ChangePasswordView()),
               GoRoute(path: AppPaths.settings, builder: (_, state) => const SettingsView()),
               GoRoute(path: AppPaths.myListings, builder: (_, state) => const MyListingsView()),
-              GoRoute(path: '${AppPaths.editListing}/:id', builder: (_, state) =>
-                EditListingView(listingId: state.pathParameters['id']!)),
-              GoRoute(path: '${AppPaths.boostListing}/:id', builder: (_, state) =>
-                BoostListingView(listingId: state.pathParameters['id']!)),
               GoRoute(path: AppPaths.draftListings, builder: (_, state) => const DraftListingsView()),
               GoRoute(path: AppPaths.notifications, builder: (_, state) => const NotificationsView()),
               GoRoute(path: AppPaths.wallet, builder: (_, state) => const WalletView()),
@@ -388,6 +384,10 @@ class AppRouter {
         return CreateListingView(draft: draft);
       }),
       GoRoute(path: '/trust-and-safety', builder: (_, state) => const TrustAndSafetyView()),
+      GoRoute(path: '${AppPaths.editListing}/:id', builder: (_, state) =>
+        EditListingView(listingId: state.pathParameters['id']!)),
+      GoRoute(path: '${AppPaths.boostListing}/:id', builder: (_, state) =>
+        BoostListingView(listingId: state.pathParameters['id']!)),
     ],
   );
 }

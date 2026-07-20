@@ -54,36 +54,7 @@ class _Body extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(TradeLinkSpacing.sm),
-                  decoration: BoxDecoration(
-                    color: TradeLinkColors.escrowAmber.withValues(alpha: 0.10),
-                    borderRadius: BorderRadius.circular(TradeLinkRadii.md),
-                    border: Border.all(
-                      color: TradeLinkColors.escrowAmber.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.info_outline,
-                        size: 18,
-                        color: TradeLinkColors.escrowAmber,
-                      ),
-                      const SizedBox(width: TradeLinkSpacing.xs),
-                      Expanded(
-                        child: Text(
-                          'Bạn chỉ có thể đổi hình thức giao dịch khi chưa có giao dịch nào',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: TradeLinkColors.escrowAmber,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: TradeLinkSpacing.lg),
+
                 TextField(
                   controller: TextEditingController(text: vm.listing.title),
                   style: theme.textTheme.bodyLarge,
@@ -156,7 +127,15 @@ class _Body extends StatelessWidget {
                         icon: Icons.save_outlined,
                         onPressed: () async {
                           final ok = await vm.save();
-                          if (ok && context.mounted) context.pop();
+                          if (ok && context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Cập nhật tin đăng thành công!'),
+                                backgroundColor: TradeLinkColors.successGreen,
+                              ),
+                            );
+                            context.pop();
+                          }
                         },
                       ),
                     ),

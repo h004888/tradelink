@@ -31,6 +31,7 @@ class ApiClient {
     _token = await StorageService.instance.getToken();
     _refreshToken = await StorageService.instance.getRefreshToken();
     _role = await StorageService.instance.getRole();
+    _userId = await StorageService.instance.getUserId();
     _initialized = true;
   }
 
