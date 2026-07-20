@@ -23,6 +23,7 @@ class AppPaths {
   static const String verifyPrompt = '/auth/verify-prompt';
   static const String verifyOTP = '/auth/verify-otp';
   static const String settings = '/profile/settings';
+  static const String wallet = '/wallet';
 
   // TV2 — Post Management
   static const String createListing = '/listings/create';

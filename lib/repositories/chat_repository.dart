@@ -90,7 +90,10 @@ class ChatRepository {
     final list = (data ?? []).map((raw) {
       final j = raw as Map<String, dynamic>;
       final participants = (j['participants'] as List?)?.map((p) {
-        if (p is Map) return {'id': p['_id']?.toString() ?? '', 'name': p['fullName']?.toString() ?? ''};
+        if (p is Map) {
+          final fullName = p['fullName']?.toString();
+          return {'id': p['_id']?.toString() ?? '', 'name': (fullName == null || fullName.isEmpty) ? null : fullName};
+        }
         return {'id': p.toString(), 'name': 'User'};
       }).toList() ?? [];
       // Lọc ra người chat còn lại (không phải current user) — tránh hiển thị tên chính mình

@@ -87,7 +87,7 @@ class _ConversationTile extends StatelessWidget {
         radius: 24,
         backgroundColor: TradeLinkColors.surfaceContainerHigh,
         child: Text(
-          (conversation.otherUserName ?? '?')[0].toUpperCase(),
+          _avatarInitial(conversation.otherUserName),
           style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w600,
@@ -113,6 +113,11 @@ class _ConversationTile extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _avatarInitial(String? name) {
+    final trimmed = name?.trim() ?? '';
+    return trimmed.isEmpty ? '?' : trimmed[0].toUpperCase();
   }
 
   /// Format thời gian: "Vừa xong" / "HH:mm" / "dd/MM"
