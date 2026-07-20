@@ -195,20 +195,40 @@ class _Body extends StatelessWidget {
                 // Action buttons
                 Row(
                   children: [
-                    Expanded(
-                      child: TradeLinkButton.secondary(
-                        label: 'Chỉnh sửa',
-                        icon: Icons.edit_outlined,
-                        onPressed: () => vm.edit(context),
+                    if (vm.isOwner) ...[
+                      Expanded(
+                        child: TradeLinkButton.secondary(
+                          label: 'Chỉnh sửa',
+                          icon: Icons.edit_outlined,
+                          onPressed: () => vm.edit(context),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: TradeLinkSpacing.sm),
+                      const SizedBox(width: TradeLinkSpacing.sm),
+                      Expanded(
+                        child: TradeLinkButton.secondary(
+                          label: 'Xóa tin',
+                          icon: Icons.delete_outline,
+                          saleContext: false,
+                          onPressed: () => _showDeleteConfirm(context, vm),
+                        ),
+                      ),
+                      const SizedBox(width: TradeLinkSpacing.sm),
+                    ] else ...[
+                      Expanded(
+                        child: TradeLinkButton.secondary(
+                          label: 'Gửi đề nghị',
+                          icon: Icons.local_offer_outlined,
+                          onPressed: () {},
+                        ),
+                      ),
+                      const SizedBox(width: TradeLinkSpacing.sm),
+                    ],
                     Expanded(
-                      flex: 2,
+                      flex: vm.isOwner ? 2 : 1,
                       child: TradeLinkButton.cta(
-                        label: 'Đẩy tin nổi bật',
-                        icon: Icons.trending_up,
-                        onPressed: () => vm.boost(context),
+                        label: vm.isOwner ? 'Đẩy tin nổi bật' : 'Mua ngay',
+                        icon: vm.isOwner ? Icons.trending_up : Icons.shopping_cart_outlined,
+                        onPressed: () => vm.isOwner ? vm.boost(context) : {},
                         saleContext: l.type == ListingType.sale,
                       ),
                     ),
@@ -221,6 +241,30 @@ class _Body extends StatelessWidget {
         _ => const SizedBox.shrink(),
       },
     );
+  }
+
+  Future<void> _showDeleteConfirm(BuildContext context, ListingDetailViewModel vm) async {
+    final res = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Xác nhận xóa'),
+        content: const Text('Bạn có chắc chắn muốn xóa tin đăng này không? Thao tác này không thể hoàn tác.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Hủy'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: TradeLinkColors.error),
+            child: const Text('Xóa'),
+          ),
+        ],
+      ),
+    );
+    if (res == true && context.mounted) {
+      vm.delete(context);
+    }
   }
 }
 
