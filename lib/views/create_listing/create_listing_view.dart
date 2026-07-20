@@ -3,10 +3,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/ui_state.dart' as ui;
 import '../../models/listing_model.dart';
 import '../../utils/theme.dart';
+import '../../utils/constants.dart';
 import '../../viewmodels/create_listing_viewmodel.dart';
 import '../../widgets/tradelink_app_bar.dart';
 import '../../widgets/tradelink_button.dart';
@@ -39,7 +41,19 @@ class _CreateListingBody extends StatelessWidget {
         title: 'Đăng tin mới',
         actions: [
           TextButton(
-            onPressed: vm.saveDraft,
+            onPressed: () async {
+              final success = await vm.saveDraft();
+              if (success && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Lưu nháp thành công!'),
+                    backgroundColor: TradeLinkColors.successGreen,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+                context.pushReplacement(AppPaths.draftListings);
+              }
+            },
             style: TextButton.styleFrom(
               foregroundColor: TradeLinkColors.actionBlue,
             ),
