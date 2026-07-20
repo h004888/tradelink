@@ -232,6 +232,23 @@ class _Body extends StatelessWidget {
                       height: 56,
                       width: 56,
                       decoration: BoxDecoration(
+                        color: TradeLinkColors.surfaceContainerHigh,
+                        borderRadius: BorderRadius.circular(TradeLinkRadii.md),
+                      ),
+                      child: IconButton(
+                        icon: Icon(
+                          l.status == ListingStatus.hidden ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                          color: TradeLinkColors.onSurfaceVariant,
+                        ),
+                        tooltip: l.status == ListingStatus.hidden ? 'Hiển thị tin' : 'Ẩn tin',
+                        onPressed: () => _showHideConfirm(context, vm, isHidden: l.status == ListingStatus.hidden),
+                      ),
+                    ),
+                    const SizedBox(width: TradeLinkSpacing.sm),
+                    Container(
+                      height: 56,
+                      width: 56,
+                      decoration: BoxDecoration(
                         color: TradeLinkColors.error.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(TradeLinkRadii.md),
                       ),
@@ -303,6 +320,50 @@ class _Body extends StatelessWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Đã xóa tin đăng thành công!'),
+            backgroundColor: TradeLinkColors.successGreen,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        context.pop();
+        context.pop();
+      }
+    }
+  }
+
+  Future<void> _showHideConfirm(
+    BuildContext context,
+    ListingDetailViewModel vm, {
+    required bool isHidden,
+  }) async {
+    final res = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(isHidden ? 'Xác nhận hiển thị' : 'Xác nhận ẩn'),
+        content: Text(
+          isHidden
+              ? 'Bạn có chắc chắn muốn hiển thị lại tin đăng này không? Mọi người sẽ có thể thấy và giao dịch.'
+              : 'Bạn có chắc chắn muốn ẩn tin đăng này không? Tin đăng sẽ không còn hiển thị với người khác.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Hủy'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(
+                foregroundColor: isHidden ? TradeLinkColors.actionBlue : TradeLinkColors.escrowAmber),
+            child: Text(isHidden ? 'Hiển thị tin' : 'Ẩn tin'),
+          ),
+        ],
+      ),
+    );
+    if (res == true && context.mounted) {
+      final success = await vm.toggleVisibility(context, isHidden: isHidden);
+      if (success && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(isHidden ? 'Đã hiển thị lại tin đăng!' : 'Đã ẩn tin đăng thành công!'),
             backgroundColor: TradeLinkColors.successGreen,
             behavior: SnackBarBehavior.floating,
           ),

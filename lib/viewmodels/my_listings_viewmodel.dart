@@ -22,15 +22,18 @@ class MyListingsViewModel extends ChangeNotifier {
   }
 
   StreamSubscription? _listingDeletedSub;
+  StreamSubscription? _listingStatusChangedSub;
 
   MyListingsViewModel() { 
     loadListings(); 
     _listingDeletedSub = EventBus.onListingDeleted.listen(removeListing);
+    _listingStatusChangedSub = EventBus.onListingStatusChanged.listen(setFilter);
   }
 
   @override
   void dispose() {
     _listingDeletedSub?.cancel();
+    _listingStatusChangedSub?.cancel();
     super.dispose();
   }
 

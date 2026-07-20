@@ -46,4 +46,31 @@ class ListingDetailViewModel extends ChangeNotifier {
       return false;
     }
   }
+
+  Future<bool> toggleVisibility(BuildContext context, {required bool isHidden}) async {
+    try {
+      final res = isHidden 
+          ? await _repository.unhideListing(listingId)
+          : await _repository.hideListing(listingId);
+          
+      if (res is ResultSuccess<Listing>) {
+        // Cập nhật lại UI detail view
+        _state = Success(res.data);
+        notifyListeners();
+        
+        // Notify the feed lists
+        if (isHidden) {
+          EventBus.fireListingCreated(res.data); // Add back to feed
+          EventBus.fireListingStatusChanged(ListingStatus.active); // Tell MyListings to switch tab
+        } else {
+          EventBus.fireListingDeleted(listingId); // Remove from feed
+          EventBus.fireListingStatusChanged(ListingStatus.hidden);
+        }
+        return true;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
 }
