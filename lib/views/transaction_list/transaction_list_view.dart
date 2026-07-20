@@ -93,6 +93,7 @@ class _TransactionTile extends StatelessWidget {
       EscrowStep.delivered => TradeLinkBadgeType.info,
       EscrowStep.reviewPeriod => TradeLinkBadgeType.pending,
       EscrowStep.released => TradeLinkBadgeType.success,
+      EscrowStep.refunded => TradeLinkBadgeType.dispute,
     };
   }
 

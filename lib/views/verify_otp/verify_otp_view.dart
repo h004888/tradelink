@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/api_client.dart';
+import '../../core/failure.dart';
 import '../../core/result.dart';
 import '../../repositories/auth_repository.dart';
 import '../../utils/constants.dart';
@@ -274,36 +275,83 @@ class _VerifyOTPViewModel extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
-    final result = await _repository.verifyOTP(email, otp);
+    try {
+      final result = await _repository.verifyOTP(email, otp);
 
-    if (result is ResultSuccess<Map<String, dynamic>>) {
-      final data = result.data;
-      final token = data['token'] as String?;
-      final refreshToken = data['refreshToken'] as String?;
+      if (result is ResultSuccess<Map<String, dynamic>>) {
+        final data = result.data;
+        final token = data['token'] as String?;
+        final refreshToken = data['refreshToken'] as String?;
 
-      if (token != null) {
-        await ApiClient.instance.setToken(token);
-        if (refreshToken != null) {
-          await ApiClient.instance.setRefreshToken(refreshToken);
+        if (token != null) {
+          await ApiClient.instance.setToken(token);
+          if (refreshToken != null) {
+            await ApiClient.instance.setRefreshToken(refreshToken);
+          }
+          // Lưu userId từ response — cần cho chat isMe check và các tính năng khác
+          final userId = (data['user'] is Map)
+              ? ((data['user'] as Map)['_id'] as String? ?? (data['user'] as Map)['id'] as String?)
+              : (data['userId'] as String?);
+          if (userId != null) {
+            await ApiClient.instance.setUserId(userId);
+          }
+          _isLoading = false;
+          notifyListeners();
+          return true;
         }
-        _isLoading = false;
-        notifyListeners();
-        return true;
       }
+
+      if (result is FailureResult<Map<String, dynamic>>) {
+        final failure = result.failure;
+        _errorMessage = failure.message.isNotEmpty
+            ? failure.message
+            : 'Mã OTP không đúng hoặc đã hết hạn';
+      } else {
+        _errorMessage = 'Mã OTP không đúng hoặc đã hết hạn';
+      }
+    } catch (e) {
+      final msg = switch (e) {
+        AuthFailure(:final message) => message,
+        ValidationFailure(:final message) => message,
+        NetworkFailure(:final message) => message,
+        ServerFailure(:final message) => message,
+        _ => e.toString(),
+      };
+      _errorMessage = msg.isNotEmpty ? msg : 'Mã OTP không đúng hoặc đã hết hạn';
     }
 
     _isLoading = false;
-    _errorMessage = 'Mã OTP không đúng hoặc đã hết hạn';
     notifyListeners();
     return false;
   }
 
   Future<bool> resendOTP() async {
-    final result = await _repository.resendOTP(email);
-    if (result is ResultSuccess) {
-      _startCountdown();
-      return true;
+    try {
+      final result = await _repository.resendOTP(email);
+      if (result is ResultSuccess) {
+        _startCountdown();
+        return true;
+      }
+      if (result is FailureResult<bool>) {
+        _errorMessage = result.failure.message.isNotEmpty
+            ? result.failure.message
+            : 'Không thể gửi lại mã OTP';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      final msg = switch (e) {
+        AuthFailure(:final message) => message,
+        ValidationFailure(:final message) => message,
+        NetworkFailure(:final message) => message,
+        ServerFailure(:final message) => message,
+        _ => e.toString(),
+      };
+      _errorMessage = msg.isNotEmpty ? msg : 'Không thể gửi lại mã OTP';
+      notifyListeners();
+      return false;
     }
+
     _errorMessage = 'Không thể gửi lại mã OTP';
     notifyListeners();
     return false;

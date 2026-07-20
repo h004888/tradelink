@@ -1,15 +1,27 @@
 import '../core/api_client.dart';
 import '../core/failure.dart';
 import '../core/result.dart';
+import '../services/chat_socket.dart';
 
 class AuthRepository {
   final _api = ApiClient.instance;
+
+  /// Lấy thông tin user hiện tại từ access token đang lưu local.
+  Future<Result<Map<String, dynamic>>> getCurrentUser() async {
+    final res = await _api.get('/auth/me');
+    return switch (res) {
+      ResultSuccess(data: final d) => ResultSuccess<Map<String, dynamic>>(
+          (d['data'] as Map?)?.cast<String, dynamic>() ?? d,
+        ),
+      FailureResult(failure: final f) => FailureResult<Map<String, dynamic>>(f),
+    };
+  }
 
   Future<Result<Map<String, dynamic>>> register(String email, String password, String name, {String? phone, String? address}) async {
     final body = <String, dynamic>{
       'email': email,
       'password': password,
-      'name': name,
+      'fullName': name,
       'phone': phone,
     };
     if (address != null && address.isNotEmpty) body['address'] = address;
@@ -23,6 +35,11 @@ class AuthRepository {
 
   Future<Result<bool>> loginWithPassword(String email, String password) async {
     final res = await _api.post('/auth/login', body: {'email': email, 'password': password});
+    return _setTokenFromResult(res);
+  }
+
+  Future<Result<bool>> loginWithGoogle(String idToken) async {
+    final res = await _api.post('/auth/google', body: {'idToken': idToken});
     return _setTokenFromResult(res);
   }
 
@@ -47,12 +64,19 @@ class AuthRepository {
     if (newRefreshToken != null) {
       await _api.setRefreshToken(newRefreshToken);
     }
+    if (data['user'] is Map) {
+      final role = (data['user'] as Map)['role'] as String?;
+      if (role != null) await _api.setRole(role);
+    }
     return ResultSuccess<bool>(true);
   }
 
   Future<void> logout() async {
     await _api.post('/auth/logout');
     await _api.clearTokens();
+    // Dispose chat socket để ngắt kết nối realtime với token cũ,
+    // đảm bảo user mới login sẽ reconnect với token mới.
+    ChatSocket.instance.dispose();
   }
 
   /// Đổi mật khẩu — backend yêu cầu Bearer token, verify mật khẩu cũ và hash mật khẩu mới.
@@ -129,6 +153,10 @@ class AuthRepository {
       } else if (data['user'] is Map) {
         final userId = (data['user'] as Map)['_id'] as String? ?? (data['user'] as Map)['id'] as String?;
         if (userId != null) await _api.setUserId(userId);
+      }
+      if (data['user'] is Map) {
+        final role = (data['user'] as Map)['role'] as String?;
+        if (role != null) await _api.setRole(role);
       }
       return ResultSuccess<bool>(true);
     }

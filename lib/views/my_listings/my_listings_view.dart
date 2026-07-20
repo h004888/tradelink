@@ -39,8 +39,18 @@ class _Body extends StatelessWidget {
         subtitle: 'Quản lý tin bán và trao đổi',
         actions: [
           IconButton(
+<<<<<<< HEAD
             icon: const Icon(Icons.drafts_outlined),
             tooltip: 'Nháp tin đăng',
+=======
+            icon: const Icon(Icons.local_offer_outlined),
+            tooltip: 'Đề nghị nhận được',
+            onPressed: () => context.push('${AppPaths.offersList}?scope=received'),
+          ),
+          IconButton(
+            icon: const Icon(Icons.note_add_outlined),
+            tooltip: 'Tin nháp',
+>>>>>>> main
             onPressed: () => context.push(AppPaths.draftListings),
           ),
         ],

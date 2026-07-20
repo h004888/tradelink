@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/api_client.dart';
+import '../../core/result.dart';
 import '../../core/ui_state.dart';
 import '../../models/listing_model.dart';
 import '../../utils/format.dart';
 import '../../utils/theme.dart';
+import '../../viewmodels/home_category_viewmodel.dart';
 import '../../viewmodels/search_results_viewmodel.dart';
 
 class SearchResultsView extends StatelessWidget {
@@ -296,10 +299,11 @@ class _BodyState extends State<_Body> {
   }
 
   Widget _buildFilterChips(SearchResultsViewModel vm) {
-    return Container(
+    return SizedBox(
       height: 48,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         children: [
           _FilterChip(
             label: 'Tất cả',
@@ -318,8 +322,49 @@ class _BodyState extends State<_Body> {
             selected: vm.typeFilter == ListingType.trade,
             onTap: () => vm.setTypeFilter(ListingType.trade),
           ),
+          const SizedBox(width: 8),
+          _FilterChip(
+            label: vm.categoryName ?? 'Danh mục',
+            icon: Icons.category_outlined,
+            selected: vm.categoryId != null,
+            onTap: () => _openFilterSheet(context, vm),
+          ),
+          const SizedBox(width: 8),
+          _FilterChip(
+            label: vm.minPrice != null || vm.maxPrice != null ? 'Đã lọc giá' : 'Khoảng giá',
+            icon: Icons.attach_money,
+            selected: vm.minPrice != null || vm.maxPrice != null,
+            onTap: () => _openFilterSheet(context, vm),
+          ),
+          const SizedBox(width: 8),
+          _FilterChip(
+            label: _sortLabel(vm.sort),
+            icon: Icons.sort,
+            selected: vm.sort != SearchSort.relevance,
+            onTap: () => _openFilterSheet(context, vm),
+          ),
         ],
       ),
+    );
+  }
+
+  String _sortLabel(SearchSort sort) => switch (sort) {
+        SearchSort.relevance => 'Sắp xếp',
+        SearchSort.priceAsc => 'Giá tăng dần',
+        SearchSort.priceDesc => 'Giá giảm dần',
+        SearchSort.popular => 'Phổ biến',
+        SearchSort.newest => 'Mới nhất',
+      };
+
+  void _openFilterSheet(BuildContext context, SearchResultsViewModel vm) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: TradeLinkColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _FilterSheet(vm: vm),
     );
   }
 
@@ -383,8 +428,9 @@ class _FilterChip extends StatelessWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
+  final IconData? icon;
 
-  const _FilterChip({required this.label, required this.selected, required this.onTap});
+  const _FilterChip({required this.label, required this.selected, required this.onTap, this.icon});
 
   @override
   Widget build(BuildContext context) {
@@ -399,17 +445,210 @@ class _FilterChip extends StatelessWidget {
             color: selected ? TradeLinkColors.primaryContainer : TradeLinkColors.cardBorder,
           ),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-            color: selected ? Colors.white : TradeLinkColors.onSurface,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 14, color: selected ? Colors.white : TradeLinkColors.onSurfaceVariant),
+              const SizedBox(width: 4),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                color: selected ? Colors.white : TradeLinkColors.onSurface,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Filter Sheet (danh mục / khoảng giá / sắp xếp) ──
+class _FilterSheet extends StatefulWidget {
+  final SearchResultsViewModel vm;
+  const _FilterSheet({required this.vm});
+
+  @override
+  State<_FilterSheet> createState() => _FilterSheetState();
+}
+
+class _FilterSheetState extends State<_FilterSheet> {
+  late final TextEditingController _minController;
+  late final TextEditingController _maxController;
+  late String? _categoryId;
+  late String? _categoryName;
+  late SearchSort _sort;
+
+  UiState<List<CategoryItem>> _categoriesState = const Loading();
+
+  @override
+  void initState() {
+    super.initState();
+    final vm = widget.vm;
+    _minController = TextEditingController(text: vm.minPrice?.toStringAsFixed(0) ?? '');
+    _maxController = TextEditingController(text: vm.maxPrice?.toStringAsFixed(0) ?? '');
+    _categoryId = vm.categoryId;
+    _categoryName = vm.categoryName;
+    _sort = vm.sort;
+    _loadCategories();
+  }
+
+  Future<void> _loadCategories() async {
+    final res = await ApiClient.instance.get('/categories');
+    if (!mounted) return;
+    setState(() {
+      _categoriesState = switch (res) {
+        ResultSuccess(data: final d) => Success(
+            ((d['data'] as List?) ?? []).map((e) => CategoryItem.fromJson(e as Map<String, dynamic>)).toList(),
+          ),
+        FailureResult(failure: final f) => Error(message: f.message),
+      };
+    });
+  }
+
+  @override
+  void dispose() {
+    _minController.dispose();
+    _maxController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Bộ lọc', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                const Text('Danh mục', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                const SizedBox(height: 8),
+                switch (_categoriesState) {
+                  Loading() => const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: SizedBox(
+                        height: 24, width: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                  Success(data: final cats) => Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: cats.map((c) => ChoiceChip(
+                        label: Text(c.name, style: const TextStyle(fontSize: 13)),
+                        selected: _categoryId == c.id,
+                        onSelected: (sel) => setState(() {
+                          _categoryId = sel ? c.id : null;
+                          _categoryName = sel ? c.name : null;
+                        }),
+                      )).toList(),
+                    ),
+                  _ => const SizedBox.shrink(),
+                },
+
+                const SizedBox(height: 20),
+                const Text('Khoảng giá (VNĐ)', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _minController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(hintText: 'Từ', isDense: true),
+                      ),
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8),
+                      child: Text('—'),
+                    ),
+                    Expanded(
+                      child: TextField(
+                        controller: _maxController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(hintText: 'Đến', isDense: true),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 20),
+                const Text('Sắp xếp', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: SearchSort.values.map((s) => ChoiceChip(
+                    label: Text(_sortLabelStatic(s), style: const TextStyle(fontSize: 13)),
+                    selected: _sort == s,
+                    onSelected: (_) => setState(() => _sort = s),
+                  )).toList(),
+                ),
+
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () {
+                          widget.vm.clearFilters();
+                          Navigator.pop(context);
+                        },
+                        child: const Text('Đặt lại'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          final min = double.tryParse(_minController.text);
+                          final max = double.tryParse(_maxController.text);
+                          widget.vm
+                            ..setCategoryFilter(_categoryId, _categoryName)
+                            ..setPriceRange(min, max)
+                            ..setSort(_sort);
+                          Navigator.pop(context);
+                        },
+                        child: const Text('Áp dụng'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
+
+  String _sortLabelStatic(SearchSort s) => switch (s) {
+        SearchSort.relevance => 'Liên quan nhất',
+        SearchSort.priceAsc => 'Giá tăng dần',
+        SearchSort.priceDesc => 'Giá giảm dần',
+        SearchSort.popular => 'Phổ biến',
+        SearchSort.newest => 'Mới nhất',
+      };
 }
 
 // ── Result Card ──

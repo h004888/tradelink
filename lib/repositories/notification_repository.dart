@@ -1,7 +1,7 @@
 import '../core/api_client.dart';
 import '../core/result.dart';
 
-enum NotificationType { transaction, chat, dispute, system }
+enum NotificationType { transaction, chat, dispute, system, offer }
 
 class AppNotification {
   final String id;
@@ -21,6 +21,16 @@ class AppNotification {
     required this.createdAt,
     this.relatedId,
   });
+
+  AppNotification copyWith({bool? isRead}) => AppNotification(
+        id: id,
+        type: type,
+        title: title,
+        body: body,
+        isRead: isRead ?? this.isRead,
+        createdAt: createdAt,
+        relatedId: relatedId,
+      );
 }
 
 class NotificationRepository {
@@ -32,6 +42,7 @@ class NotificationRepository {
       'transaction' => NotificationType.transaction,
       'chat' => NotificationType.chat,
       'dispute' => NotificationType.dispute,
+      'offer' => NotificationType.offer,
       _ => NotificationType.system,
     };
     return AppNotification(
@@ -72,5 +83,14 @@ class NotificationRepository {
       return FailureResult<bool>(res.failure);
     }
     return ResultSuccess<bool>(true);
+  }
+
+  Future<Result<int>> getUnreadCount() async {
+    final res = await _api.get('/notifications/unread-count');
+    return switch (res) {
+      ResultSuccess(data: final d) =>
+        ResultSuccess<int>((d['data']?['count'] as num?)?.toInt() ?? 0),
+      FailureResult(failure: final f) => FailureResult<int>(f),
+    };
   }
 }

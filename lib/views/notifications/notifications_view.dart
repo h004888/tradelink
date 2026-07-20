@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/ui_state.dart';
 import '../../repositories/notification_repository.dart';
+import '../../utils/constants.dart';
 import '../../utils/theme.dart';
 import '../../viewmodels/notifications_viewmodel.dart';
 import '../../widgets/empty_state.dart';
@@ -29,6 +31,7 @@ class _Body extends StatelessWidget {
         NotificationType.transaction => Icons.swap_horiz,
         NotificationType.chat => Icons.chat_bubble_outline,
         NotificationType.dispute => Icons.warning_amber_outlined,
+        NotificationType.offer => Icons.local_offer_outlined,
         NotificationType.system => Icons.info_outline,
       };
 
@@ -36,19 +39,60 @@ class _Body extends StatelessWidget {
         NotificationType.transaction => TradeLinkColors.tradeTeal,
         NotificationType.chat => TradeLinkColors.actionBlue,
         NotificationType.dispute => TradeLinkColors.disputeRed,
+        NotificationType.offer => TradeLinkColors.saleBlue,
         NotificationType.system => TradeLinkColors.onSurfaceVariant,
       };
+
+  /// Điều hướng theo type — chỉ dùng relatedId khi biết chắc nó trỏ đúng đối tượng
+  /// (xem ghi chú ở từng case). Không rõ/không an toàn → không điều hướng, chỉ đánh dấu đã đọc.
+  void _handleTap(BuildContext context, NotificationsViewModel vm, AppNotification n) {
+    vm.markRead(n.id);
+    final id = n.relatedId;
+    if (id == null || id.isEmpty) return;
+    switch (n.type) {
+      case NotificationType.chat:
+        // relatedId = conversationId (chat.service.ts). Dùng go() — route nằm lồng
+        // trong nhánh "Tin nhắn" của shell, push() từ đây (Hồ sơ/Home) gây xung đột
+        // GlobalKey trong Navigator khi cross-branch.
+        context.go('${AppPaths.chat}/$id');
+      case NotificationType.transaction:
+        // relatedId = transactionId. Không biết sale/trade từ notification —
+        // luôn vào màn Sale, có tự chuyển hướng nếu thực ra là giao dịch trade.
+        // Dùng go() — cùng lý do cross-branch như trên.
+        context.go('${AppPaths.transactionSale}/$id');
+      case NotificationType.offer:
+        // relatedId có thể là offerId (từ chối) hoặc transactionId (chấp nhận) —
+        // không phân biệt được, đưa về danh sách đề nghị cho an toàn.
+        context.push(AppPaths.offersList);
+      case NotificationType.system:
+        // Chủ yếu là thông báo duyệt/gỡ tin — relatedId = listingId.
+        context.push('${AppPaths.itemDetail}/$id');
+      case NotificationType.dispute:
+        // relatedId = disputeId, không phải transactionId — chưa có endpoint tra cứu
+        // ngược lại nên không điều hướng được chính xác.
+        break;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<NotificationsViewModel>();
     final theme = Theme.of(context);
+    final hasUnread = vm.state is Success<List<AppNotification>> &&
+        (vm.state as Success<List<AppNotification>>).data.any((n) => !n.isRead);
 
     return Scaffold(
       backgroundColor: TradeLinkColors.surface,
-      appBar: const TradeLinkAppBar(
+      appBar: TradeLinkAppBar(
         title: 'Thông báo',
         subtitle: 'Cập nhật giao dịch và tin nhắn',
+        actions: [
+          if (hasUnread)
+            TextButton(
+              onPressed: vm.markAllRead,
+              child: const Text('Đọc tất cả', style: TextStyle(fontSize: 13)),
+            ),
+        ],
       ),
       body: switch (vm.state) {
         Loading() => const LoadingSkeleton.list(itemCount: 6),
@@ -74,6 +118,7 @@ class _Body extends StatelessWidget {
                   final n = list[i];
                   final color = _color(n.type);
                   return TradeLinkCard(
+                    onTap: () => _handleTap(context, vm, n),
                     padding: const EdgeInsets.all(TradeLinkSpacing.md),
                     child: Row(
                       children: [

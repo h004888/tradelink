@@ -113,8 +113,12 @@ class _Body extends StatelessWidget {
             Wrap(
               spacing: TradeLinkSpacing.xs,
               runSpacing: TradeLinkSpacing.xs,
-              children: const ['Thân thiện', 'Đúng mô tả', 'Giao hàng nhanh', 'Bao bì kỹ']
-                  .map((t) => ActionChip(label: Text(t), onPressed: () {}))
+              children: ['Thân thiện', 'Đúng mô tả', 'Giao hàng nhanh', 'Bao bì kỹ']
+                  .map((t) => FilterChip(
+                        label: Text(t),
+                        selected: vm.selectedTags.contains(t),
+                        onSelected: (_) => vm.toggleTag(t),
+                      ))
                   .toList(),
             ),
             const SizedBox(height: TradeLinkSpacing.xl),

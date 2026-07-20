@@ -78,15 +78,15 @@ class _ProfileBody extends StatelessWidget {
               shape: BoxShape.circle,
               color: TradeLinkColors.surfaceContainerHigh,
               border: Border.all(
-                color: _reputationColor(profile.reputationScore),
+                color: _reputationColor(profile.uyTinScore),
                 width: 3,
               ),
             ),
             alignment: Alignment.center,
             child: ClipOval(
-              child: profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty
+              child: profile.avatar != null && profile.avatar!.isNotEmpty
                   ? Image.network(
-                      profile.avatarUrl!,
+                      profile.avatar!,
                       width: 96,
                       height: 96,
                       fit: BoxFit.cover,
@@ -105,7 +105,7 @@ class _ProfileBody extends StatelessWidget {
           ),
           const SizedBox(height: TradeLinkSpacing.md),
           Text(
-            profile.name,
+            profile.fullName,
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
@@ -190,10 +190,10 @@ class _ProfileBody extends StatelessWidget {
               vertical: TradeLinkSpacing.xs,
             ),
             decoration: BoxDecoration(
-              color: _reputationColor(profile.reputationScore).withValues(alpha: 0.10),
+              color: _reputationColor(profile.uyTinScore).withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(TradeLinkRadii.full),
               border: Border.all(
-                color: _reputationColor(profile.reputationScore).withValues(alpha: 0.3),
+                color: _reputationColor(profile.uyTinScore).withValues(alpha: 0.3),
               ),
             ),
             child: Row(
@@ -202,15 +202,15 @@ class _ProfileBody extends StatelessWidget {
                 Icon(
                   Icons.star_rounded,
                   size: 18,
-                  color: _reputationColor(profile.reputationScore),
+                  color: _reputationColor(profile.uyTinScore),
                 ),
                 const SizedBox(width: TradeLinkSpacing.xs),
                 Text(
-                  '${profile.reputationScore} điểm • Hạng ${profile.reputationTier}',
+                  '${profile.uyTinScore} điểm • Hạng ${profile.reputationTier}',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: _reputationColor(profile.reputationScore),
+                        color: _reputationColor(profile.uyTinScore),
                         letterSpacing: 0.2,
                       ),
                 ),
@@ -227,7 +227,7 @@ class _ProfileBody extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _statItem(context, '${profile.totalTransactions}', 'Giao dịch'),
+                _statItem(context, '${profile.successfulTransactions}', 'Giao dịch'),
                 Container(
                   width: 1,
                   height: 32,
@@ -243,6 +243,19 @@ class _ProfileBody extends StatelessWidget {
               ],
             ),
           ),
+          if (profile.badges != null && profile.badges!.isNotEmpty) ...[
+            const SizedBox(height: TradeLinkSpacing.lg),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Wrap(
+                spacing: TradeLinkSpacing.xs,
+                runSpacing: TradeLinkSpacing.xs,
+                children: profile.badges!
+                    .map((badge) => Chip(label: Text(badge)))
+                    .toList(),
+              ),
+            ),
+          ],
           const SizedBox(height: TradeLinkSpacing.lg),
           // Menu items
           TradeLinkCard(
@@ -285,10 +298,33 @@ class _ProfileBody extends StatelessWidget {
                 const Divider(height: 1, indent: 56, color: TradeLinkColors.cardDivider),
                 _menuItem(
                   context,
+                  Icons.account_balance_wallet_outlined,
+                  'Ví của tôi',
+                  onTap: () => context.push(AppPaths.wallet),
+                ),
+                const Divider(height: 1, indent: 56, color: TradeLinkColors.cardDivider),
+                _menuItem(
+                  context,
+                  Icons.local_offer_outlined,
+                  'Đề nghị',
+                  onTap: () => context.push(AppPaths.offersList),
+                ),
+                const Divider(height: 1, indent: 56, color: TradeLinkColors.cardDivider),
+                _menuItem(
+                  context,
                   Icons.notifications_outlined,
                   'Thông báo',
                   onTap: () => context.push(AppPaths.notifications),
                 ),
+                if (profile.isAdmin) ...[
+                  const Divider(height: 1, indent: 56, color: TradeLinkColors.cardDivider),
+                  _menuItem(
+                    context,
+                    Icons.admin_panel_settings_outlined,
+                    'Quản trị hệ thống (Admin)',
+                    onTap: () => context.push(AppPaths.admin),
+                  ),
+                ],
                 const Divider(height: 1, indent: 56, color: TradeLinkColors.cardDivider),
                 _menuItem(
                   context,

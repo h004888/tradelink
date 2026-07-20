@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../core/ui_state.dart';
 import '../../models/filter_model.dart';
 import '../../models/listing_model.dart';
 import '../../models/transaction_model.dart';
-import '../../utils/constants.dart';
 import '../../utils/theme.dart';
 import '../../viewmodels/home_viewmodel.dart';
 import '../../widgets/active_transaction_card.dart';
 import '../../widgets/category_horizontal_list.dart';
 import '../../widgets/home_search_bar.dart';
+import '../../widgets/notification_bell.dart';
+import '../../widgets/promo_banner.dart';
 import '../../widgets/safe_transaction_banner.dart';
 
 class HomeView extends StatelessWidget {
@@ -108,6 +108,8 @@ class _HomeBodyState extends State<_HomeBody> {
                   SliverToBoxAdapter(child: _buildHeader()),
                   // Search bar
                   const SliverToBoxAdapter(child: HomeSearchBar()),
+                  // Banner khuyến mãi (tin boosted)
+                  SliverToBoxAdapter(child: PromoBanner(state: vm.bannerState)),
                   // Active transaction card
                   SliverToBoxAdapter(child: ActiveTransactionCard(
                     transaction: activeTx,
@@ -210,11 +212,7 @@ class _HomeBodyState extends State<_HomeBody> {
           children: [
             Image.asset('assets/images/logo.png', width: 32, height: 32),
             const Spacer(),
-            IconButton(
-              icon: const Icon(Icons.notifications_outlined),
-              onPressed: () => context.push(AppPaths.notifications),
-              visualDensity: VisualDensity.compact,
-            ),
+            const NotificationBell(),
           ],
         ),
       ),

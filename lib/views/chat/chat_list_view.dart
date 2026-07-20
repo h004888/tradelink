@@ -87,7 +87,7 @@ class _ConversationTile extends StatelessWidget {
         radius: 24,
         backgroundColor: TradeLinkColors.surfaceContainerHigh,
         child: Text(
-          (conversation.otherUserName ?? '?')[0].toUpperCase(),
+          _avatarInitial(conversation.otherUserName),
           style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w600,
@@ -100,12 +100,35 @@ class _ConversationTile extends StatelessWidget {
         style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
       ),
       subtitle: Text(
-        'Nhấn để xem tin nhắn',
+        conversation.lastMessage ?? 'Nhấn để xem tin nhắn',
         style: TextStyle(fontSize: 13, color: TradeLinkColors.onSurfaceVariant),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
-      trailing: const Icon(Icons.chevron_right_rounded, size: 20, color: TradeLinkColors.onSurfaceVariant),
+      trailing: Text(
+        _formatTime(conversation.updatedAt),
+        style: TextStyle(
+          fontSize: 12,
+          color: TradeLinkColors.onSurfaceVariant,
+        ),
+      ),
     );
+  }
+
+  String _avatarInitial(String? name) {
+    final trimmed = name?.trim() ?? '';
+    return trimmed.isEmpty ? '?' : trimmed[0].toUpperCase();
+  }
+
+  /// Format thời gian: "Vừa xong" / "HH:mm" / "dd/MM"
+  String _formatTime(DateTime? date) {
+    if (date == null) return '';
+    final now = DateTime.now();
+    final diff = now.difference(date);
+    if (diff.inMinutes < 1) return 'Vừa xong';
+    if (diff.inHours < 24 && date.day == now.day) {
+      return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    }
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}';
   }
 }

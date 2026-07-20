@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/ui_state.dart';
-import '../../utils/constants.dart';
 import '../../utils/theme.dart';
 import '../../viewmodels/admin_dashboard_viewmodel.dart';
+import '../../widgets/admin_bottom_nav.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/tradelink_app_bar.dart';
 import '../../widgets/tradelink_card.dart';
@@ -44,23 +43,11 @@ class _BodyState extends State<_Body> with SingleTickerProviderStateMixin {
 
     return Scaffold(
       backgroundColor: TradeLinkColors.surface,
-      appBar: TradeLinkAppBar(
+      appBar: const TradeLinkAppBar(
         title: 'Admin Dashboard',
         subtitle: 'Quản lý hệ thống',
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.people_outline),
-            tooltip: 'Quản lý người dùng',
-            onPressed: () => context.push(AppPaths.adminUsers),
-          ),
-          IconButton(
-            icon: const Icon(Icons.receipt_long_outlined),
-            tooltip: 'Quản lý giao dịch',
-            onPressed: () => context.push(AppPaths.adminTransactions),
-          ),
-          const SizedBox(width: TradeLinkSpacing.xs),
-        ],
       ),
+      bottomNavigationBar: const AdminBottomNav(currentIndex: AdminBottomNav.tabDashboard),
       body: switch (state) {
         Loading() => const Center(
             child: SizedBox(
@@ -259,11 +246,46 @@ class _DisputeCard extends StatelessWidget {
               fontWeight: FontWeight.w700,
             ),
           ),
-          if (dispute.raisedByName != null)
+          if (dispute.description.isNotEmpty) ...[
+            const SizedBox(height: 4),
             Text(
-              'Từ: ${dispute.raisedByName} • ${dispute.status}',
-              style: theme.textTheme.labelSmall?.copyWith(
+              dispute.description,
+              style: theme.textTheme.bodySmall?.copyWith(
                 color: TradeLinkColors.onSurfaceVariant,
+              ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+          if (dispute.attachments.isNotEmpty) ...[
+            const SizedBox(height: TradeLinkSpacing.xs),
+            SizedBox(
+              height: 48,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: dispute.attachments.map((url) => Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: Image.network(url, width: 48, height: 48, fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => Container(
+                        width: 48, height: 48, color: TradeLinkColors.surfaceContainerHigh,
+                        child: const Icon(Icons.broken_image_outlined, size: 16),
+                      ),
+                    ),
+                  ),
+                )).toList(),
+              ),
+            ),
+          ],
+          if (dispute.raisedByName != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                'Từ: ${dispute.raisedByName} • ${dispute.status}',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: TradeLinkColors.onSurfaceVariant,
+                ),
               ),
             ),
           const SizedBox(height: TradeLinkSpacing.sm),
@@ -273,47 +295,24 @@ class _DisputeCard extends StatelessWidget {
               color: TradeLinkColors.successGreen,
               borderRadius: BorderRadius.circular(TradeLinkRadii.xs),
               child: InkWell(
-                onTap: () async {
-                  final ctrl = TextEditingController();
-                  final ok = await showDialog<bool>(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: const Text('Giải quyết khiếu nại'),
-                      content: TextField(
-                        controller: ctrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Nội dung giải quyết',
-                        ),
-                        maxLines: 3,
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx, false),
-                          child: const Text('Huỷ'),
-                        ),
-                        ElevatedButton(
-                          onPressed: () => Navigator.pop(ctx, true),
-                          child: const Text('Xác nhận'),
-                        ),
-                      ],
-                    ),
-                  );
-                  if (ok == true && ctrl.text.isNotEmpty) {
-                    await vm.resolveDispute(dispute.id, ctrl.text);
-                  }
-                },
+                onTap: vm.isBusy(dispute.id) ? null : () => _openResolveDialog(context),
                 borderRadius: BorderRadius.circular(TradeLinkRadii.xs),
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(vertical: TradeLinkSpacing.sm),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: TradeLinkSpacing.sm),
                   child: Center(
-                    child: Text(
-                      'Giải quyết',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+                    child: vm.isBusy(dispute.id)
+                        ? const SizedBox(
+                            width: 16, height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Text(
+                            'Giải quyết',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                   ),
                 ),
               ),
@@ -322,6 +321,72 @@ class _DisputeCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _openResolveDialog(BuildContext context) async {
+    final ctrl = TextEditingController();
+    String decision = 'release';
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
+          title: const Text('Giải quyết khiếu nại'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Quyết định', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+              RadioListTile<String>(
+                value: 'release',
+                groupValue: decision,
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Giải ngân cho người bán', style: TextStyle(fontSize: 13)),
+                onChanged: (v) => setState(() => decision = v!),
+              ),
+              RadioListTile<String>(
+                value: 'refund',
+                groupValue: decision,
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Hoàn tiền cho người mua', style: TextStyle(fontSize: 13)),
+                onChanged: (v) => setState(() => decision = v!),
+              ),
+              RadioListTile<String>(
+                value: 'reject',
+                groupValue: decision,
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Từ chối khiếu nại (giữ nguyên)', style: TextStyle(fontSize: 13)),
+                onChanged: (v) => setState(() => decision = v!),
+              ),
+              const SizedBox(height: TradeLinkSpacing.sm),
+              TextField(
+                controller: ctrl,
+                decoration: const InputDecoration(labelText: 'Nội dung giải quyết'),
+                maxLines: 3,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Huỷ'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Xác nhận'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (ok == true && ctrl.text.isNotEmpty) {
+      final success = await vm.resolveDispute(dispute.id, ctrl.text, decision: decision);
+      if (!success && context.mounted && vm.actionError != null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(vm.actionError!)));
+      }
+    }
   }
 }
 
@@ -384,12 +449,42 @@ class _ModerationTab extends StatelessWidget {
                     ],
                   ),
                 ),
+                const SizedBox(width: TradeLinkSpacing.xs),
+                if (vm.isBusy(l.id))
+                  const SizedBox(
+                    width: 20, height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else ...[
+                  IconButton(
+                    icon: const Icon(Icons.check_circle_outline, color: TradeLinkColors.successGreen),
+                    tooltip: 'Duyệt — tin hợp lệ',
+                    onPressed: () => _moderate(context, vm, l.id, true),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.remove_circle_outline, color: TradeLinkColors.error),
+                    tooltip: 'Gỡ tin vi phạm',
+                    onPressed: () => _moderate(context, vm, l.id, false),
+                  ),
+                ],
               ],
             ),
           ),
         );
       },
     );
+  }
+
+  Future<void> _moderate(BuildContext context, AdminDashboardViewModel vm, String listingId, bool approve) async {
+    final ok = await vm.moderateListing(listingId, approve: approve);
+    if (!context.mounted) return;
+    if (!ok && vm.actionError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(vm.actionError!)));
+    } else if (ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(approve ? 'Đã duyệt tin đăng' : 'Đã gỡ tin vi phạm')),
+      );
+    }
   }
 }
 

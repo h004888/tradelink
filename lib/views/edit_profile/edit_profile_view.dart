@@ -49,13 +49,13 @@ class _EditProfileBody extends StatelessWidget {
             actionLabel: 'Thử lại',
             onAction: vm.load,
           ),
-        Success(data: final profile) => _buildForm(context, vm, profile.avatarUrl),
+        Success(data: final profile) => _buildForm(context, vm, profile.avatar),
         _ => const SizedBox.shrink(),
       },
     );
   }
 
-  Widget _buildForm(BuildContext context, EditProfileViewModel vm, String? avatarUrl) {
+  Widget _buildForm(BuildContext context, EditProfileViewModel vm, String? avatar) {
     final theme = Theme.of(context);
     return SingleChildScrollView(
       padding: const EdgeInsets.all(TradeLinkSpacing.marginMobile),
@@ -128,9 +128,9 @@ class _EditProfileBody extends StatelessWidget {
                         width: 2,
                       ),
                     ),
-                    child: avatarUrl != null
+                    child: avatar != null
                         ? Image.network(
-                            avatarUrl,
+                            avatar,
                             fit: BoxFit.cover,
                             width: 96,
                             height: 96,
@@ -179,13 +179,24 @@ class _EditProfileBody extends StatelessWidget {
           const SizedBox(height: TradeLinkSpacing.lg),
           // Form fields
           TextField(
-            controller: TextEditingController(text: vm.name),
+            controller: TextEditingController(text: vm.fullName),
             style: theme.textTheme.bodyLarge,
             decoration: const InputDecoration(
               labelText: 'Họ và tên',
               prefixIcon: Icon(Icons.person_outline),
             ),
-            onChanged: vm.onNameChanged,
+            onChanged: vm.onFullNameChanged,
+          ),
+          const SizedBox(height: TradeLinkSpacing.md),
+          TextField(
+            controller: TextEditingController(text: vm.phone),
+            style: theme.textTheme.bodyLarge,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(
+              labelText: 'Số điện thoại',
+              prefixIcon: Icon(Icons.phone_outlined),
+            ),
+            onChanged: vm.onPhoneChanged,
           ),
           const SizedBox(height: TradeLinkSpacing.md),
           // Địa chỉ với nút chọn bản đồ
@@ -231,6 +242,47 @@ class _EditProfileBody extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: TradeLinkSpacing.lg),
+          Text(
+            'Thông tin nhận tiền',
+            style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: TradeLinkSpacing.xs),
+          Text(
+            'Dùng để nhận thanh toán khi bạn bán được hàng — admin sẽ chuyển khoản vào đây.',
+            style: theme.textTheme.bodySmall?.copyWith(color: TradeLinkColors.onSurfaceVariant),
+          ),
+          const SizedBox(height: TradeLinkSpacing.sm),
+          TextField(
+            controller: TextEditingController(text: vm.bankName),
+            style: theme.textTheme.bodyLarge,
+            decoration: const InputDecoration(
+              labelText: 'Tên ngân hàng',
+              prefixIcon: Icon(Icons.account_balance_outlined),
+            ),
+            onChanged: vm.onBankNameChanged,
+          ),
+          const SizedBox(height: TradeLinkSpacing.md),
+          TextField(
+            controller: TextEditingController(text: vm.bankAccountNumber),
+            style: theme.textTheme.bodyLarge,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Số tài khoản',
+              prefixIcon: Icon(Icons.numbers_outlined),
+            ),
+            onChanged: vm.onBankAccountNumberChanged,
+          ),
+          const SizedBox(height: TradeLinkSpacing.md),
+          TextField(
+            controller: TextEditingController(text: vm.bankAccountHolder),
+            style: theme.textTheme.bodyLarge,
+            decoration: const InputDecoration(
+              labelText: 'Chủ tài khoản',
+              prefixIcon: Icon(Icons.badge_outlined),
+            ),
+            onChanged: vm.onBankAccountHolderChanged,
           ),
           if (vm.avatarState is Error) ...[
             const SizedBox(height: TradeLinkSpacing.xs),

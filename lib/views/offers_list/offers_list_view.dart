@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/offer_model.dart';
+import '../../models/transaction_model.dart';
+import '../../utils/constants.dart';
 import '../../utils/format.dart';
 import '../../utils/theme.dart';
 import '../../viewmodels/offers_list_viewmodel.dart';
@@ -10,12 +13,13 @@ import '../../widgets/tradelink_app_bar.dart';
 import '../../widgets/tradelink_card.dart';
 
 class OffersListView extends StatelessWidget {
-  const OffersListView({super.key});
+  final OffersScope initialScope;
+  const OffersListView({super.key, this.initialScope = OffersScope.sent});
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => OffersListViewModel(),
+      create: (_) => OffersListViewModel(scope: initialScope),
       child: const _Body(),
     );
   }
@@ -192,6 +196,23 @@ class _Body extends StatelessWidget {
                             style: theme.textTheme.bodySmall,
                           ),
                         ],
+                        if (o.cashTopUp != null) ...[
+                          const SizedBox(height: TradeLinkSpacing.xs),
+                          Row(
+                            children: [
+                              Text(
+                                'Tiền bù thêm: ',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: TradeLinkColors.onSurfaceVariant,
+                                ),
+                              ),
+                              TradeLinkText.money(
+                                formatVnd(o.cashTopUp),
+                                size: 'compact',
+                              ),
+                            ],
+                          ),
+                        ],
                         if (o.message.isNotEmpty) ...[
                           const SizedBox(height: TradeLinkSpacing.sm),
                           Container(
@@ -218,6 +239,8 @@ class _Body extends StatelessWidget {
                             ),
                           ),
                         ],
+                        const SizedBox(height: TradeLinkSpacing.sm),
+                        _OfferStatusOrActions(offer: o, vm: vm),
                       ],
                     ),
                   );
@@ -285,5 +308,113 @@ class _ScopeTab extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Hiện nút Chấp nhận/Từ chối (bên nhận, khi còn pending) hoặc badge trạng thái
+/// (đã xử lý, hoặc bên gửi đang chờ phản hồi).
+class _OfferStatusOrActions extends StatelessWidget {
+  final Offer offer;
+  final OffersListViewModel vm;
+  const _OfferStatusOrActions({required this.offer, required this.vm});
+
+  @override
+  Widget build(BuildContext context) {
+    final isReceived = vm.scope == OffersScope.received;
+    final busy = vm.isResponding(offer.id);
+
+    if (offer.status != OfferStatus.pending) {
+      final accepted = offer.status == OfferStatus.accepted;
+      return Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: TradeLinkSpacing.sm, vertical: 4),
+            decoration: BoxDecoration(
+              color: (accepted ? TradeLinkColors.successGreen : TradeLinkColors.error)
+                  .withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(TradeLinkRadii.full),
+            ),
+            child: Text(
+              accepted ? 'Đã chấp nhận' : 'Đã từ chối',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: accepted ? TradeLinkColors.successGreen : TradeLinkColors.error,
+              ),
+            ),
+          ),
+          if (accepted && offer.transactionId != null) ...[
+            const Spacer(),
+            TextButton(
+              onPressed: () => _goToTransaction(context, offer),
+              child: const Text('Xem giao dịch', style: TextStyle(fontSize: 13)),
+            ),
+          ],
+        ],
+      );
+    }
+
+    if (!isReceived) {
+      return Text(
+        'Đang chờ người bán phản hồi...',
+        style: TextStyle(
+          fontSize: 12,
+          fontStyle: FontStyle.italic,
+          color: TradeLinkColors.onSurfaceVariant,
+        ),
+      );
+    }
+
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton(
+            onPressed: busy ? null : () => _respond(context, false),
+            style: OutlinedButton.styleFrom(foregroundColor: TradeLinkColors.error),
+            child: const Text('Từ chối'),
+          ),
+        ),
+        const SizedBox(width: TradeLinkSpacing.sm),
+        Expanded(
+          child: ElevatedButton(
+            onPressed: busy ? null : () => _respond(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: TradeLinkColors.successGreen,
+              foregroundColor: Colors.white,
+            ),
+            child: busy
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                : const Text('Chấp nhận'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _respond(BuildContext context, bool accept) async {
+    final tx = await vm.respond(offer.id, accept);
+    if (!context.mounted) return;
+    if (accept && tx != null) {
+      _goToTransaction(context, offer, tx: tx);
+    } else if (accept && vm.respondError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(vm.respondError!)),
+      );
+    }
+  }
+
+  void _goToTransaction(BuildContext context, Offer o, {Transaction? tx}) {
+    final txId = tx?.id ?? o.transactionId;
+    if (txId == null) return;
+    final isTrade = (tx?.type ?? (o.type == OfferType.trade ? TransactionType.trade : TransactionType.sale))
+        == TransactionType.trade;
+    final path = isTrade ? AppPaths.transactionTrade : AppPaths.transactionSale;
+    // Dùng go() thay vì push() — route này nằm lồng trong nhánh "Giao dịch" của bottom-nav
+    // shell, push() từ ngoài shell (màn Đề nghị) gây xung đột GlobalKey trong Navigator.
+    context.go('$path/$txId');
   }
 }

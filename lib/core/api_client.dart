@@ -19,6 +19,7 @@ class ApiClient {
   String? _token;
   String? _refreshToken;
   String? _userId;
+  String? _role;
   RefreshTokenCallback? _onRefresh;
   bool _initialized = false;
   bool get isInitialized => _initialized;
@@ -29,6 +30,7 @@ class ApiClient {
     if (_initialized) return;
     _token = await StorageService.instance.getToken();
     _refreshToken = await StorageService.instance.getRefreshToken();
+    _role = await StorageService.instance.getRole();
     _initialized = true;
   }
 
@@ -69,7 +71,19 @@ class ApiClient {
   Future<void> clearTokens() async {
     _token = null;
     _refreshToken = null;
+    _role = null;
     await StorageService.instance.clearTokens();
+  }
+
+  /// Role hiện tại — cache trong bộ nhớ, đọc được ngay lập tức (không async) để
+  /// router có thể quyết định redirect admin/user mà không cần chờ gọi API.
+  String? getRole() => _role;
+
+  Future<void> setRole(String? role) async {
+    _role = role;
+    if (role != null) {
+      await StorageService.instance.saveRole(role);
+    }
   }
 
   Map<String, String> _headers() {

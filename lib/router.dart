@@ -32,11 +32,13 @@ import 'views/chat/chat_view.dart';
 import 'views/watchlist/watchlist_view.dart';
 import 'views/send_offer/send_offer_view.dart';
 import 'views/offers_list/offers_list_view.dart';
+import 'viewmodels/offers_list_viewmodel.dart';
 import 'views/transaction_list/transaction_list_view.dart';
 import 'views/transaction_sale/transaction_sale_view.dart';
 import 'views/transaction_trade/transaction_trade_view.dart';
 import 'views/create_order/create_order_view.dart';
 import 'views/notifications/notifications_view.dart';
+import 'views/wallet/wallet_view.dart';
 import 'views/dispute/dispute_view.dart';
 import 'views/review/review_view.dart';
 import 'views/admin_dashboard/admin_dashboard_view.dart';
@@ -80,6 +82,7 @@ class AppRouter {
     AppPaths.editListing,
     AppPaths.boostListing,
     AppPaths.draftListings,
+    AppPaths.wallet,
     AppPaths.transactions,
     AppPaths.chat,
     AppPaths.watchlist,
@@ -139,6 +142,7 @@ class AppRouter {
       final token = ApiClient.instance.isInitialized
           ? ApiClient.instance.getToken()
           : null;
+      final isAdmin = ApiClient.instance.isInitialized && ApiClient.instance.getRole() == 'admin';
       final location = state.matchedLocation;
 
       debugPrint('[Router] redirect: location=$location');
@@ -153,9 +157,15 @@ class AppRouter {
       // Guest public paths — không redirect
       if (token == null && isPublic(location)) return null;
 
-      // Nếu có token và đang ở auth page → về Home
+      // Nếu có token và đang ở auth page → về Home (admin → thẳng Dashboard)
       if (token != null && (_isAuthPage(location) || location == AppPaths.onboarding || location == '/')) {
-        return AppPaths.home;
+        return isAdmin ? AppPaths.admin : AppPaths.home;
+      }
+
+      // Admin chỉ quản trị, không dùng các màn dành cho người mua/bán —
+      // mọi điều hướng ngoài khu vực /admin đều bị đưa về Dashboard.
+      if (token != null && isAdmin && !location.startsWith(AppPaths.admin)) {
+        return AppPaths.admin;
       }
 
       // Nếu không có token và đang ở protected path → redirect login
@@ -202,7 +212,11 @@ class AppRouter {
                   GoRoute(path: AppPaths.watchlist, builder: (_, state) => const WatchlistView()),
                   GoRoute(path: '${AppPaths.sendOffer}/:listingId', builder: (_, state) =>
                     SendOfferView(listingId: state.pathParameters['listingId']!)),
-                  GoRoute(path: AppPaths.offersList, builder: (_, state) => const OffersListView()),
+                  GoRoute(path: AppPaths.offersList, builder: (_, state) => OffersListView(
+                    initialScope: state.uri.queryParameters['scope'] == 'received'
+                        ? OffersScope.received
+                        : OffersScope.sent,
+                  )),
                 ],
               ),
             ],
@@ -269,15 +283,26 @@ class AppRouter {
                 BoostListingView(listingId: state.pathParameters['id']!)),
               GoRoute(path: AppPaths.draftListings, builder: (_, state) => const DraftListingsView()),
               GoRoute(path: AppPaths.notifications, builder: (_, state) => const NotificationsView()),
-              GoRoute(path: AppPaths.admin, builder: (_, state) => const AdminDashboardView()),
-              GoRoute(path: AppPaths.adminUsers, builder: (_, state) => const AdminUsersView()),
-              GoRoute(path: AppPaths.adminTransactions, builder: (_, state) => const AdminTransactionsView()),
+              GoRoute(path: AppPaths.wallet, builder: (_, state) => const WalletView()),
             ],
           ),
         ],
       ),
 
       // ── Routes ngoài shell (full screen, không bottom nav) ──
+      // Admin — giao diện quản trị riêng biệt, không dùng chung shell/bottom-nav với người dùng thường.
+      GoRoute(
+        path: AppPaths.admin,
+        builder: (_, state) => const AdminDashboardView(),
+      ),
+      GoRoute(
+        path: AppPaths.adminUsers,
+        builder: (_, state) => const AdminUsersView(),
+      ),
+      GoRoute(
+        path: AppPaths.adminTransactions,
+        builder: (_, state) => const AdminTransactionsView(),
+      ),
       GoRoute(
         path: '${AppPaths.itemDetail}/:id',
         builder: (_, state) => ItemDetailView(itemId: state.pathParameters['id']!),
@@ -291,6 +316,16 @@ class AppRouter {
         path: '${AppPaths.sellerProfile}/:userId',
         builder: (_, state) => SellerProfileView(userId: state.pathParameters['userId']!),
       ),
+      // Top-level cho Offers List — mở từ Profile menu / My Listings / Notifications
+      // (đều là top-level hoặc ngoài nhánh Home) nên cần bản path tuyệt đối.
+      GoRoute(
+        path: AppPaths.offersList,
+        builder: (_, state) => OffersListView(
+          initialScope: state.uri.queryParameters['scope'] == 'received'
+              ? OffersScope.received
+              : OffersScope.sent,
+        ),
+      ),
       GoRoute(
         path: AppPaths.watchlist,
         builder: (_, state) => const WatchlistView(),
@@ -298,6 +333,35 @@ class AppRouter {
       GoRoute(
         path: AppPaths.notifications,
         builder: (_, state) => const NotificationsView(),
+      ),
+      // Top-level cho Send Offer / Create Order / Review — được mở từ ItemDetailView
+      // (top-level, ngoài shell) nên cần bản path tuyệt đối, không chỉ bản lồng trong branch.
+      GoRoute(
+        path: '${AppPaths.sendOffer}/:listingId',
+        builder: (_, state) => SendOfferView(listingId: state.pathParameters['listingId']!),
+      ),
+      GoRoute(
+        path: '${AppPaths.createOrder}/:listingId',
+        builder: (_, state) => CreateOrderView(listingId: state.pathParameters['listingId']!),
+      ),
+      GoRoute(
+        path: '${AppPaths.review}/:transactionId/:targetId',
+        builder: (_, state) => ReviewView(
+          transactionId: state.pathParameters['transactionId']!,
+          targetId: state.pathParameters['targetId']!,
+        ),
+      ),
+      // Top-level cho Listing Detail (quản lý tin của seller) — mở từ ItemDetailView (top-level, ngoài shell).
+      GoRoute(
+        path: '${AppPaths.listingDetail}/:id',
+        builder: (_, state) => ListingDetailView(listingId: state.pathParameters['id']!),
+      ),
+      // Top-level cho Dispute — path nested trong branch Transactions dùng full AppPaths constant
+      // nên effective path thực tế là /transactions/disputes/:id, không khớp AppPaths.dispute tuyệt đối.
+      // Đăng ký thêm bản top-level để context.push(AppPaths.dispute) hoạt động đúng.
+      GoRoute(
+        path: '${AppPaths.dispute}/:transactionId',
+        builder: (_, state) => DisputeView(transactionId: state.pathParameters['transactionId']!),
       ),
       GoRoute(path: AppPaths.onboarding, builder: (_, state) => const OnboardingView()),
       GoRoute(path: AppPaths.login, builder: (_, state) => const LoginView()),

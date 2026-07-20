@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/result.dart';
 import '../../models/offer_model.dart';
+import '../../models/transaction_model.dart';
 import '../../repositories/offer_repository.dart';
 
 enum OffersScope { sent, received }
@@ -17,6 +18,11 @@ class OffersListViewModel extends ChangeNotifier {
   bool get isLoading => _loading;
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
+
+  final Set<String> _respondingIds = {};
+  bool isResponding(String offerId) => _respondingIds.contains(offerId);
+  String? _respondError;
+  String? get respondError => _respondError;
 
   OffersListViewModel({OffersScope scope = OffersScope.sent}) {
     _scope = scope;
@@ -47,5 +53,28 @@ class OffersListViewModel extends ChangeNotifier {
     }
     _loading = false;
     notifyListeners();
+  }
+
+  /// Seller chấp nhận/từ chối 1 offer đã nhận. Trả về Transaction nếu chấp nhận
+  /// thành công (để view điều hướng sang màn theo dõi tương ứng).
+  Future<Transaction?> respond(String offerId, bool accept) async {
+    _respondingIds.add(offerId);
+    _respondError = null;
+    notifyListeners();
+
+    final res = await _repository.respond(offerId, accept);
+    _respondingIds.remove(offerId);
+
+    switch (res) {
+      case ResultSuccess<OfferRespondResult>(:final data):
+        final idx = _items.indexWhere((o) => o.id == offerId);
+        if (idx != -1) _items[idx] = data.offer;
+        notifyListeners();
+        return data.transaction;
+      case FailureResult<OfferRespondResult>(:final failure):
+        _respondError = failure.message;
+        notifyListeners();
+        return null;
+    }
   }
 }

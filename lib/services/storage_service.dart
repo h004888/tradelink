@@ -1,4 +1,5 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Service quản lý persistent storage cho auth tokens và onboarding state.
 /// Dùng FlutterSecureStorage (mã hóa) thay vì SharedPreferences (plaintext).
@@ -13,6 +14,10 @@ class StorageService {
   static const _keyRefreshToken = 'auth_refresh_token';
   static const _keyOnboardingDone = 'onboarding_done';
   static const _keyUserId = 'user_id';
+  static const _keyRole = 'user_role';
+  static const _keyRecentSearches = 'recent_searches';
+  static const _keyNotificationEnabled = 'settings_notifications_enabled';
+  static const _keySelectedLanguage = 'settings_selected_language';
 
   // ── Auth tokens ──
   Future<void> saveToken(String token) =>
@@ -31,6 +36,7 @@ class StorageService {
     await _storage.delete(key: _keyToken);
     await _storage.delete(key: _keyRefreshToken);
     await _storage.delete(key: _keyUserId);
+    await _storage.delete(key: _keyRole);
   }
 
   // ── User ID ──
@@ -43,6 +49,13 @@ class StorageService {
   Future<void> clearUserId() =>
       _storage.delete(key: _keyUserId);
 
+  // ── Role — cache để router quyết định redirect ngay khi khởi động, không cần chờ gọi API ──
+  Future<void> saveRole(String role) =>
+      _storage.write(key: _keyRole, value: role);
+
+  Future<String?> getRole() =>
+      _storage.read(key: _keyRole);
+
   // ── Onboarding state ──
   Future<void> setOnboardingDone() =>
       _storage.write(key: _keyOnboardingDone, value: 'true');
@@ -51,4 +64,30 @@ class StorageService {
     final v = await _storage.read(key: _keyOnboardingDone);
     return v == 'true';
   }
+
+  // ── Recent searches (không nhạy cảm → SharedPreferences là đủ) ──
+  Future<List<String>> getRecentSearches() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList(_keyRecentSearches) ?? const [];
+  }
+
+  Future<void> saveRecentSearches(List<String> searches) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_keyRecentSearches, searches);
+  }
+
+  // ── User settings ──
+  Future<void> saveNotificationEnabled(bool enabled) =>
+      _storage.write(key: _keyNotificationEnabled, value: enabled.toString());
+
+  Future<bool> getNotificationEnabled() async {
+    final v = await _storage.read(key: _keyNotificationEnabled);
+    return v == null ? true : v == 'true';
+  }
+
+  Future<void> saveSelectedLanguage(String language) =>
+      _storage.write(key: _keySelectedLanguage, value: language);
+
+  Future<String> getSelectedLanguage() async =>
+      await _storage.read(key: _keySelectedLanguage) ?? 'vi';
 }

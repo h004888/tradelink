@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/api_client.dart';
 import '../../core/result.dart';
 import '../../core/ui_state.dart';
 import '../../models/profile_model.dart';
@@ -50,13 +49,12 @@ class ProfileViewModel extends ChangeNotifier {
   }
 
   void navigateToSettings(BuildContext context) {
-    // TODO: Settings screen
+    context.push(AppPaths.settings);
   }
 
   Future<void> logout(BuildContext context) async {
     // Gọi API logout (optional — để backend track), rồi clear token local + navigate
     await AuthRepository().logout();
-    await ApiClient.instance.clearTokens();
     if (context.mounted) context.go(AppPaths.login);
   }
 }

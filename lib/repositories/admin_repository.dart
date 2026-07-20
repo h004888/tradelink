@@ -1,12 +1,18 @@
 import '../core/api_client.dart';
 import '../core/result.dart';
+import '../models/wallet_model.dart';
 
 class Dispute {
   final String id;
   final String transactionId;
   final String reason;
+  final String description;
   final String status;
   final bool priority;
+  final String? resolution;
+  final String? decision;
+  final List<String> attachments;
+  final String? chatLogSnapshot;
   final DateTime createdAt;
   final String? raisedByName;
 
@@ -14,8 +20,13 @@ class Dispute {
     required this.id,
     required this.transactionId,
     required this.reason,
+    required this.description,
     required this.status,
     required this.priority,
+    this.resolution,
+    this.decision,
+    this.attachments = const [],
+    this.chatLogSnapshot,
     required this.createdAt,
     this.raisedByName,
   });
@@ -24,12 +35,17 @@ class Dispute {
     final raisedBy = j['raisedBy'] is Map ? j['raisedBy'] as Map : null;
     return Dispute(
       id: j['_id']?.toString() ?? '',
-      transactionId: j['transactionId']?.toString() ?? '',
+      transactionId: (j['transactionId'] is Map ? j['transactionId']['_id'] : j['transactionId'])?.toString() ?? '',
       reason: j['reason']?.toString() ?? '',
+      description: j['description']?.toString() ?? '',
       status: j['status']?.toString() ?? 'open',
       priority: j['priority'] == true,
+      resolution: j['resolution'] as String?,
+      decision: j['decision'] as String?,
+      attachments: ((j['attachments'] as List?) ?? []).map((e) => e.toString()).toList(),
+      chatLogSnapshot: j['chatLogSnapshot'] as String?,
       createdAt: DateTime.tryParse(j['createdAt']?.toString() ?? '') ?? DateTime.now(),
-      raisedByName: raisedBy?['name'] as String?,
+      raisedByName: raisedBy?['fullName'] as String?,
     );
   }
 }
@@ -52,7 +68,7 @@ class FlaggedListing {
     return FlaggedListing(
       id: j['_id']?.toString() ?? '',
       title: j['title']?.toString() ?? '',
-      sellerName: seller?['name'] as String?,
+      sellerName: seller?['fullName'] as String?,
       flags: (j['flags'] as num?)?.toInt() ?? 0,
     );
   }
@@ -110,9 +126,9 @@ class AdminUserItem {
   AdminUserItem({required this.id, required this.name, required this.email, required this.role, required this.totalTransactions, required this.successRate});
   factory AdminUserItem.fromJson(Map<String, dynamic> j) => AdminUserItem(
     id: j['_id']?.toString() ?? '',
-    name: j['name']?.toString() ?? '',
+    name: j['fullName']?.toString() ?? '',
     email: j['email']?.toString() ?? '',
-    role: j['role']?.toString() ?? 'buyer',
+    role: j['role']?.toString() ?? 'user',
     totalTransactions: (j['totalTransactions'] as num?)?.toInt() ?? 0,
     successRate: (j['successRate'] as num?)?.toDouble() ?? 100,
   );
@@ -131,14 +147,15 @@ class AdminTransactionItem {
   factory AdminTransactionItem.fromJson(Map<String, dynamic> j) => AdminTransactionItem(
     id: j['_id']?.toString() ?? '',
     listingTitle: j['listingTitle']?.toString() ?? '',
-    buyerId: j['buyerId']?.toString() ?? '',
-    sellerId: j['sellerId']?.toString() ?? '',
-    status: j['status']?.toString() ?? '',
+    buyerId: (j['buyerId'] is Map ? j['buyerId']['_id'] : j['buyerId'])?.toString() ?? '',
+    sellerId: (j['sellerId'] is Map ? j['sellerId']['_id'] : j['sellerId'])?.toString() ?? '',
+    status: j['escrowStep']?.toString() ?? '',
     amount: (j['amount'] as num?)?.toDouble() ?? 0,
     type: j['type']?.toString() ?? '',
     createdAt: DateTime.tryParse(j['createdAt']?.toString() ?? '') ?? DateTime.now(),
   );
 }
+
 
 class AdminRepository {
   final _api = ApiClient.instance;
@@ -171,11 +188,59 @@ class AdminRepository {
     };
   }
 
-  Future<Result<Map<String, dynamic>>> resolveDispute(String disputeId, String resolution) async {
-    final res = await _api.patch('/admin/disputes/$disputeId', body: {'resolution': resolution});
+  Future<Result<WalletOverview>> getWalletOverview() async {
+    final res = await _api.get('/admin/wallet/overview');
+    return switch (res) {
+      ResultSuccess(data: final d) => ResultSuccess<WalletOverview>(WalletOverview.fromJson(d['data'] as Map<String, dynamic>)),
+      FailureResult(failure: final f) => FailureResult<WalletOverview>(f),
+    };
+  }
+
+  Future<Result<List<WithdrawalRequestItem>>> getWithdrawals({String? status}) async {
+    final res = await _api.get('/admin/wallet/withdrawals', query: status != null ? {'status': status} : null);
+    return switch (res) {
+      ResultSuccess(data: final d) => ResultSuccess<List<WithdrawalRequestItem>>(
+          ((d['data'] as List?) ?? []).map((e) => WithdrawalRequestItem.fromJson(e as Map<String, dynamic>)).toList(),
+        ),
+      FailureResult(failure: final f) => FailureResult<List<WithdrawalRequestItem>>(f),
+    };
+  }
+
+  Future<Result<bool>> approveWithdrawal(String id) async {
+    final res = await _api.patch('/admin/wallet/withdrawals/$id/approve');
+    return switch (res) {
+      ResultSuccess() => ResultSuccess<bool>(true),
+      FailureResult(failure: final f) => FailureResult<bool>(f),
+    };
+  }
+
+  Future<Result<bool>> rejectWithdrawal(String id, {String? note}) async {
+    final res = await _api.patch('/admin/wallet/withdrawals/$id/reject', body: {'note': ?note});
+    return switch (res) {
+      ResultSuccess() => ResultSuccess<bool>(true),
+      FailureResult(failure: final f) => FailureResult<bool>(f),
+    };
+  }
+
+  Future<Result<Map<String, dynamic>>> resolveDispute(String disputeId, String resolution, {String? decision}) async {
+    final res = await _api.patch('/admin/disputes/$disputeId', body: {
+      'resolution': resolution,
+      'decision': ?decision,
+    });
     return switch (res) {
       ResultSuccess(data: final d) => ResultSuccess<Map<String, dynamic>>(d),
       FailureResult(failure: final f) => FailureResult<Map<String, dynamic>>(f),
+    };
+  }
+
+  /// Duyệt/gỡ 1 tin bị báo cáo.
+  Future<Result<bool>> moderateListing(String listingId, {required bool approve}) async {
+    final res = await _api.patch('/admin/listings/$listingId/moderate', body: {
+      'action': approve ? 'approve' : 'reject',
+    });
+    return switch (res) {
+      ResultSuccess() => ResultSuccess<bool>(true),
+      FailureResult(failure: final f) => FailureResult<bool>(f),
     };
   }
 
@@ -184,11 +249,11 @@ class AdminRepository {
     required String email,
     required String name,
     required String password,
-    String role = 'buyer',
+    String role = 'user',
   }) async {
     final res = await _api.post('/admin/users', body: {
       'email': email,
-      'name': name,
+      'fullName': name,
       'password': password,
       'role': role,
     });

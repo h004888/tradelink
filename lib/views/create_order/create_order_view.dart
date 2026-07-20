@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/ui_state.dart';
+import '../../models/transaction_model.dart';
 import '../../utils/constants.dart';
 import '../../utils/theme.dart';
 import '../../viewmodels/create_order_viewmodel.dart';
@@ -106,7 +107,10 @@ class _Body extends StatelessWidget {
                   ? () async {
                       final tx = await vm.confirm();
                       if (tx != null && context.mounted) {
-                        context.go('${AppPaths.transactionSale}/${tx.id}');
+                        final path = tx.type == TransactionType.trade
+                            ? AppPaths.transactionTrade
+                            : AppPaths.transactionSale;
+                        context.go('$path/${tx.id}');
                       }
                     }
                   : null,

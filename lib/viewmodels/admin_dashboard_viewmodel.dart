@@ -44,11 +44,38 @@ class AdminDashboardViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> resolveDispute(String disputeId, String resolution) async {
-    final res = await _repository.resolveDispute(disputeId, resolution);
+  final Set<String> _busyIds = {};
+  bool isBusy(String id) => _busyIds.contains(id);
+  String? _actionError;
+  String? get actionError => _actionError;
+
+  Future<bool> resolveDispute(String disputeId, String resolution, {String? decision}) async {
+    _busyIds.add(disputeId);
+    _actionError = null;
+    notifyListeners();
+    final res = await _repository.resolveDispute(disputeId, resolution, decision: decision);
+    _busyIds.remove(disputeId);
     if (res is ResultSuccess<Map<String, dynamic>>) {
-      // Refresh sau khi resolve thành công
       await load();
+      return true;
     }
+    _actionError = (res as FailureResult<Map<String, dynamic>>).failure.message;
+    notifyListeners();
+    return false;
+  }
+
+  Future<bool> moderateListing(String listingId, {required bool approve}) async {
+    _busyIds.add(listingId);
+    _actionError = null;
+    notifyListeners();
+    final res = await _repository.moderateListing(listingId, approve: approve);
+    _busyIds.remove(listingId);
+    if (res is ResultSuccess<bool>) {
+      await load();
+      return true;
+    }
+    _actionError = (res as FailureResult<bool>).failure.message;
+    notifyListeners();
+    return false;
   }
 }

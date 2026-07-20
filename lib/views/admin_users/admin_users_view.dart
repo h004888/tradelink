@@ -5,6 +5,7 @@ import '../../core/result.dart';
 import '../../core/ui_state.dart';
 import '../../repositories/admin_repository.dart';
 import '../../utils/theme.dart';
+import '../../widgets/admin_bottom_nav.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/tradelink_app_bar.dart';
 import '../../widgets/tradelink_card.dart';
@@ -22,6 +23,9 @@ class _AdminUsersVM extends ChangeNotifier {
   final AdminRepository _repository = AdminRepository();
   UiState<List<AdminUserItem>> _state = const Loading();
   UiState<List<AdminUserItem>> get state => _state;
+
+  String? _actionError;
+  String? get actionError => _actionError;
 
   _AdminUsersVM() {
     load();
@@ -56,6 +60,8 @@ class _AdminUsersVM extends ChangeNotifier {
       await load();
       return true;
     }
+    _actionError = (res as FailureResult<AdminUserItem>).failure.message;
+    notifyListeners();
     return false;
   }
 
@@ -65,6 +71,8 @@ class _AdminUsersVM extends ChangeNotifier {
       await load();
       return true;
     }
+    _actionError = (res as FailureResult<bool>).failure.message;
+    notifyListeners();
     return false;
   }
 
@@ -74,6 +82,8 @@ class _AdminUsersVM extends ChangeNotifier {
       await load();
       return true;
     }
+    _actionError = (res as FailureResult<AdminUserItem>).failure.message;
+    notifyListeners();
     return false;
   }
 }
@@ -98,6 +108,7 @@ class _Body extends StatelessWidget {
           ),
         ],
       ),
+      bottomNavigationBar: const AdminBottomNav(currentIndex: AdminBottomNav.tabUsers),
       body: switch (vm.state) {
         Loading() => const Center(
             child: SizedBox(
@@ -192,23 +203,17 @@ class _Body extends StatelessWidget {
                               ],
                             ),
                           );
-                          if (ok == true) await vm.delete(u.id);
-                        } else if (action == 'promote-buyer') {
-                          await vm.changeRole(u.id, 'buyer');
-                        } else if (action == 'promote-seller') {
-                          await vm.changeRole(u.id, 'seller');
+                          if (ok == true) await _runAction(context, vm, vm.delete(u.id));
+                        } else if (action == 'promote-user') {
+                          await _runAction(context, vm, vm.changeRole(u.id, 'user'));
                         } else if (action == 'promote-admin') {
-                          await vm.changeRole(u.id, 'admin');
+                          await _runAction(context, vm, vm.changeRole(u.id, 'admin'));
                         }
                       },
                       itemBuilder: (_) => const [
                         PopupMenuItem(
-                          value: 'promote-buyer',
-                          child: Text('Đặt vai trò: Buyer'),
-                        ),
-                        PopupMenuItem(
-                          value: 'promote-seller',
-                          child: Text('Đặt vai trò: Seller'),
+                          value: 'promote-user',
+                          child: Text('Đặt vai trò: User'),
                         ),
                         PopupMenuItem(
                           value: 'promote-admin',
@@ -238,7 +243,7 @@ class _Body extends StatelessWidget {
     final emailCtl = TextEditingController();
     final nameCtl = TextEditingController();
     final pwdCtl = TextEditingController();
-    String role = 'buyer';
+    String role = 'user';
     showDialog<void>(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -264,11 +269,10 @@ class _Body extends StatelessWidget {
               DropdownButtonFormField<String>(
                 initialValue: role,
                 items: const [
-                  DropdownMenuItem(value: 'buyer', child: Text('Buyer')),
-                  DropdownMenuItem(value: 'seller', child: Text('Seller')),
+                  DropdownMenuItem(value: 'user', child: Text('User')),
                   DropdownMenuItem(value: 'admin', child: Text('Admin')),
                 ],
-                onChanged: (v) => setState(() => role = v ?? 'buyer'),
+                onChanged: (v) => setState(() => role = v ?? 'user'),
               ),
             ],
           ),
@@ -285,7 +289,12 @@ class _Body extends StatelessWidget {
                   password: pwdCtl.text,
                   role: role,
                 );
-                if (ok && context.mounted) Navigator.pop(ctx);
+                if (ok && ctx.mounted) Navigator.pop(ctx);
+                if (!ok && context.mounted && vm.actionError != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(vm.actionError!)),
+                  );
+                }
               },
               child: const Text('Tạo'),
             ),
@@ -293,5 +302,14 @@ class _Body extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _runAction(BuildContext context, _AdminUsersVM vm, Future<bool> action) async {
+    final ok = await action;
+    if (!ok && context.mounted && vm.actionError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(vm.actionError!)),
+      );
+    }
   }
 }

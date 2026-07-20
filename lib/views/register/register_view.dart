@@ -215,6 +215,25 @@ class _RegisterBodyState extends State<_RegisterBody>
 
                             const SizedBox(height: TradeLinkSpacing.md),
                             _FieldGroup(
+                              label: 'Xác nhận mật khẩu',
+                              hint: 'Nhập lại mật khẩu',
+                              icon: Icons.lock_outline,
+                              obscure: vm.obscureConfirmPassword,
+                              onChanged: vm.onConfirmPasswordChanged,
+                              suffix: IconButton(
+                                icon: Icon(
+                                  vm.obscureConfirmPassword
+                                      ? Icons.visibility_outlined
+                                      : Icons.visibility_off_outlined,
+                                  size: 20,
+                                  color: TradeLinkColors.onSurfaceVariant,
+                                ),
+                                onPressed: vm.toggleConfirmObscure,
+                              ),
+                            ),
+
+                            const SizedBox(height: TradeLinkSpacing.md),
+                            _FieldGroup(
                               label: 'Số điện thoại',
                               hint: '0987654321',
                               icon: Icons.phone_outlined,

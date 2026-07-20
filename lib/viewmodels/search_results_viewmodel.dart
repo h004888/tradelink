@@ -7,7 +7,20 @@ import '../../core/result.dart';
 import '../../core/ui_state.dart';
 import '../../models/listing_model.dart';
 import '../../repositories/search_repository.dart';
+import '../../services/storage_service.dart';
 import '../../utils/constants.dart';
+
+enum SearchSort { relevance, priceAsc, priceDesc, popular, newest }
+
+extension on SearchSort {
+  String? get apiValue => switch (this) {
+        SearchSort.relevance => null,
+        SearchSort.priceAsc => 'price_asc',
+        SearchSort.priceDesc => 'price_desc',
+        SearchSort.popular => 'popular',
+        SearchSort.newest => 'newest',
+      };
+}
 
 class SearchResultsViewModel extends ChangeNotifier {
   final SearchRepository _repository = SearchRepository();
@@ -23,7 +36,21 @@ class SearchResultsViewModel extends ChangeNotifier {
   ListingType? _typeFilter;
   ListingType? get typeFilter => _typeFilter;
 
-  String? _categoryFilter;
+  String? _categoryId;
+  String? get categoryId => _categoryId;
+  String? _categoryName;
+  String? get categoryName => _categoryName;
+
+  double? _minPrice;
+  double? get minPrice => _minPrice;
+  double? _maxPrice;
+  double? get maxPrice => _maxPrice;
+
+  SearchSort _sort = SearchSort.relevance;
+  SearchSort get sort => _sort;
+
+  bool get hasActiveFilters =>
+      _categoryId != null || _minPrice != null || _maxPrice != null || _sort != SearchSort.relevance;
 
   // ── Suggestions state ──
   SearchSuggestions? _suggestions;
@@ -34,7 +61,7 @@ class SearchResultsViewModel extends ChangeNotifier {
 
   Timer? _debounce;
 
-  // ── Recent searches ──
+  // ── Recent searches (persisted qua SharedPreferences) ──
   List<String> _recentSearches = [];
   List<String> get recentSearches => _recentSearches;
 
@@ -55,8 +82,12 @@ class SearchResultsViewModel extends ChangeNotifier {
   }
 
   Future<void> _loadRecentSearches() async {
-    _recentSearches = ['iPhone 15', 'Laptop Dell', 'Xe máy'];
+    _recentSearches = await StorageService.instance.getRecentSearches();
     notifyListeners();
+  }
+
+  void _persistRecentSearches() {
+    StorageService.instance.saveRecentSearches(_recentSearches);
   }
 
   // ── Query handling ──
@@ -113,16 +144,19 @@ class SearchResultsViewModel extends ChangeNotifier {
     _recentSearches.remove(query);
     _recentSearches.insert(0, query);
     if (_recentSearches.length > 10) _recentSearches.removeLast();
+    _persistRecentSearches();
     notifyListeners();
   }
 
   void removeRecentSearch(String search) {
     _recentSearches.remove(search);
+    _persistRecentSearches();
     notifyListeners();
   }
 
   void clearAllRecentSearches() {
     _recentSearches.clear();
+    _persistRecentSearches();
     notifyListeners();
   }
 
@@ -136,7 +170,10 @@ class SearchResultsViewModel extends ChangeNotifier {
     final result = await _repository.search(
       query: query,
       type: _typeFilter,
-      category: _categoryFilter,
+      categoryId: _categoryId,
+      minPrice: _minPrice,
+      maxPrice: _maxPrice,
+      sort: _sort.apiValue,
     );
 
     _state = switch (result) {
@@ -153,8 +190,32 @@ class SearchResultsViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setCategoryFilter(String? c) {
-    _categoryFilter = c;
+  void setCategoryFilter(String? id, [String? name]) {
+    _categoryId = id;
+    _categoryName = id == null ? null : name;
+    if (_query.isNotEmpty) search(_query);
+    notifyListeners();
+  }
+
+  void setPriceRange(double? min, double? max) {
+    _minPrice = min;
+    _maxPrice = max;
+    if (_query.isNotEmpty) search(_query);
+    notifyListeners();
+  }
+
+  void setSort(SearchSort sort) {
+    _sort = sort;
+    if (_query.isNotEmpty) search(_query);
+    notifyListeners();
+  }
+
+  void clearFilters() {
+    _categoryId = null;
+    _categoryName = null;
+    _minPrice = null;
+    _maxPrice = null;
+    _sort = SearchSort.relevance;
     if (_query.isNotEmpty) search(_query);
     notifyListeners();
   }
