@@ -60,7 +60,7 @@ class _Body extends StatelessWidget {
                     ),
                     onDismissed: (_) => vm.deleteDraft(i),
                     child: TradeLinkCard(
-                      onTap: () => context.push(AppPaths.createListing),
+                      onTap: () => context.push(AppPaths.createListing, extra: d),
                       padding: const EdgeInsets.symmetric(
                         horizontal: TradeLinkSpacing.md,
                         vertical: TradeLinkSpacing.sm,
@@ -133,12 +133,34 @@ class _Body extends StatelessWidget {
                                     ),
                                   ],
                                 ),
+                                const SizedBox(height: TradeLinkSpacing.sm),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    TextButton.icon(
+                                      onPressed: () => vm.deleteDraft(i),
+                                      icon: const Icon(Icons.delete_outline, size: 16),
+                                      label: const Text('Xóa nháp'),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: TradeLinkColors.error,
+                                        padding: const EdgeInsets.symmetric(horizontal: TradeLinkSpacing.sm),
+                                      ),
+                                    ),
+                                    const SizedBox(width: TradeLinkSpacing.xs),
+                                    FilledButton.icon(
+                                      onPressed: () => context.push(AppPaths.createListing, extra: d),
+                                      icon: const Icon(Icons.edit_outlined, size: 16),
+                                      label: const Text('Tiếp tục'),
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: TradeLinkColors.primaryContainer,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(horizontal: TradeLinkSpacing.md),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ],
                             ),
-                          ),
-                          const Icon(
-                            Icons.chevron_right,
-                            color: TradeLinkColors.onSurfaceVariant,
                           ),
                         ],
                       ),

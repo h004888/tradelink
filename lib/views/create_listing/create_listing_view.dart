@@ -10,14 +10,16 @@ import '../../utils/theme.dart';
 import '../../viewmodels/create_listing_viewmodel.dart';
 import '../../widgets/tradelink_app_bar.dart';
 import '../../widgets/tradelink_button.dart';
+import '../../widgets/tradelink_card.dart';
 
 class CreateListingView extends StatelessWidget {
-  const CreateListingView({super.key});
+  final Listing? draft;
+  const CreateListingView({super.key, this.draft});
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => CreateListingViewModel(),
+      create: (_) => CreateListingViewModel(draft: draft),
       child: const _CreateListingBody(),
     );
   }
@@ -46,184 +48,358 @@ class _CreateListingBody extends StatelessWidget {
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(TradeLinkSpacing.marginMobile),
+        padding: const EdgeInsets.only(bottom: TradeLinkSpacing.xxl),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Progress
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Tiến độ đăng tin',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.4,
-                    color: TradeLinkColors.onSurfaceVariant,
+            // Sticky-like Progress Header
+            Container(
+              color: TradeLinkColors.surface,
+              padding: const EdgeInsets.all(TradeLinkSpacing.marginMobile),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Tiến độ đăng tin',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.4,
+                          color: TradeLinkColors.onSurfaceVariant,
+                        ),
+                      ),
+                      Text(
+                        '${vm.completionPercent}%',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                          color: TradeLinkColors.successGreen,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                Text(
-                  '${vm.completionPercent}%',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                    color: TradeLinkColors.successGreen,
+                  const SizedBox(height: TradeLinkSpacing.xs),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(TradeLinkRadii.full),
+                    child: LinearProgressIndicator(
+                      value: vm.completionPercent / 100,
+                      minHeight: 6,
+                      backgroundColor: TradeLinkColors.surfaceContainerHigh,
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        TradeLinkColors.successGreen,
+                      ),
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: TradeLinkSpacing.xs),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(TradeLinkRadii.full),
-              child: LinearProgressIndicator(
-                value: vm.completionPercent / 100,
-                minHeight: 6,
-                backgroundColor: TradeLinkColors.surfaceContainerHigh,
-                valueColor: const AlwaysStoppedAnimation<Color>(
-                  TradeLinkColors.successGreen,
-                ),
+                ],
               ),
             ),
-            const SizedBox(height: TradeLinkSpacing.lg),
-
-            Text(
-              'Hình ảnh (tối đa 8 ảnh)',
-              style: theme.textTheme.labelLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: vm.imageError != null ? theme.colorScheme.error : null,
-              ),
-            ),
-            if (vm.imageError != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                vm.imageError!,
-                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error),
-              ),
-            ],
-            const SizedBox(height: TradeLinkSpacing.xs),
-            _ImagePickerGrid(vm: vm),
-
-            const SizedBox(height: TradeLinkSpacing.lg),
-            Text(
-              'Hình thức giao dịch',
-              style: theme.textTheme.labelLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: TradeLinkSpacing.xs),
-            Row(
-              children: ListingType.values.map((t) => Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: ChoiceChip(
-                    label: Text(t == ListingType.sale
-                        ? 'Bán'
-                        : t == ListingType.trade
-                            ? 'Trao đổi'
-                            : 'Cả hai'),
-                    selected: vm.type == t,
-                    onSelected: (_) => vm.setType(t),
-                    selectedColor: t == ListingType.sale
-                        ? TradeLinkColors.saleBlue.withValues(alpha: 0.15)
-                        : TradeLinkColors.tradeTeal.withValues(alpha: 0.15),
+            
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: TradeLinkSpacing.marginMobile),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Section 1: Hình ảnh
+                  TradeLinkCard(
+                    padding: const EdgeInsets.all(TradeLinkSpacing.md),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.photo_library_outlined, size: 20, color: TradeLinkColors.actionBlue),
+                            const SizedBox(width: TradeLinkSpacing.sm),
+                            Text(
+                              'Hình ảnh',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Thêm tối đa 8 hình ảnh rõ nét để tăng cơ hội bán/đổi',
+                          style: theme.textTheme.bodySmall?.copyWith(color: TradeLinkColors.onSurfaceVariant),
+                        ),
+                        const SizedBox(height: TradeLinkSpacing.md),
+                        if (vm.imageError != null) ...[
+                          Text(
+                            vm.imageError!,
+                            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error),
+                          ),
+                          const SizedBox(height: TradeLinkSpacing.xs),
+                        ],
+                        _ImagePickerGrid(vm: vm),
+                      ],
+                    ),
                   ),
-                ),
-              )).toList(),
-            ),
+                  const SizedBox(height: TradeLinkSpacing.lg),
 
-            const SizedBox(height: TradeLinkSpacing.lg),
-            TextField(
-              style: theme.textTheme.bodyLarge,
-              decoration: InputDecoration(
-                labelText: 'Tiêu đề',
-                hintText: 'VD: iPhone 15 Pro Max 256GB',
-                errorText: vm.titleError,
+                  // Section 2: Thông tin cơ bản
+                  TradeLinkCard(
+                    padding: const EdgeInsets.all(TradeLinkSpacing.md),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.info_outline, size: 20, color: TradeLinkColors.tradeTeal),
+                            const SizedBox(width: TradeLinkSpacing.sm),
+                            Text(
+                              'Thông tin cơ bản',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: TradeLinkSpacing.lg),
+                        Text(
+                          'Hình thức giao dịch',
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: TradeLinkColors.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: TradeLinkSpacing.xs),
+                        Row(
+                          children: ListingType.values.map((t) => Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: ChoiceChip(
+                                label: Container(
+                                  width: double.infinity,
+                                  alignment: Alignment.center,
+                                  child: Text(t == ListingType.sale
+                                      ? 'Bán'
+                                      : t == ListingType.trade
+                                          ? 'Trao đổi'
+                                          : 'Cả hai'),
+                                ),
+                                selected: vm.type == t,
+                                onSelected: (_) => vm.setType(t),
+                                showCheckmark: false,
+                                selectedColor: t == ListingType.sale
+                                    ? TradeLinkColors.saleBlue.withValues(alpha: 0.15)
+                                    : TradeLinkColors.tradeTeal.withValues(alpha: 0.15),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(TradeLinkRadii.md),
+                                  side: BorderSide(
+                                    color: vm.type == t
+                                        ? (t == ListingType.sale ? TradeLinkColors.saleBlue : TradeLinkColors.tradeTeal)
+                                        : TradeLinkColors.outlineVariant,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          )).toList(),
+                        ),
+                        const SizedBox(height: TradeLinkSpacing.lg),
+                        TextField(
+                          controller: TextEditingController(text: vm.title),
+                          style: theme.textTheme.bodyLarge,
+                          decoration: InputDecoration(
+                            labelText: 'Tiêu đề tin đăng',
+                            hintText: 'VD: iPhone 15 Pro Max 256GB',
+                            errorText: vm.titleError,
+                            filled: true,
+                            fillColor: TradeLinkColors.surfaceContainerLowest,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(TradeLinkRadii.md),
+                              borderSide: const BorderSide(color: TradeLinkColors.outlineVariant),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(TradeLinkRadii.md),
+                              borderSide: const BorderSide(color: TradeLinkColors.outlineVariant),
+                            ),
+                          ),
+                          onChanged: vm.setTitle,
+                        ),
+                        const SizedBox(height: TradeLinkSpacing.md),
+                        if (vm.type != ListingType.trade) ...[
+                          TextField(
+                            controller: TextEditingController(text: vm.price?.toString() ?? ''),
+                            style: theme.textTheme.bodyLarge,
+                            decoration: InputDecoration(
+                              labelText: 'Giá bán (VNĐ)',
+                              hintText: 'VD: 45000000',
+                              prefixIcon: const Icon(Icons.monetization_on_outlined),
+                              errorText: vm.priceError,
+                              filled: true,
+                              fillColor: TradeLinkColors.surfaceContainerLowest,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(TradeLinkRadii.md),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(TradeLinkRadii.md),
+                                borderSide: const BorderSide(color: TradeLinkColors.outlineVariant),
+                              ),
+                            ),
+                            keyboardType: TextInputType.number,
+                            onChanged: vm.setPrice,
+                          ),
+                          const SizedBox(height: TradeLinkSpacing.md),
+                        ],
+                        if (vm.type != ListingType.sale) ...[
+                          TextField(
+                            controller: TextEditingController(text: vm.exchangeFor),
+                            decoration: InputDecoration(
+                              labelText: 'Mô tả món đồ muốn đổi lấy',
+                              hintText: 'VD: Đổi lấy Samsung S24 Ultra',
+                              errorText: vm.exchangeForError,
+                              filled: true,
+                              fillColor: TradeLinkColors.surfaceContainerLowest,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(TradeLinkRadii.md),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(TradeLinkRadii.md),
+                                borderSide: const BorderSide(color: TradeLinkColors.outlineVariant),
+                              ),
+                            ),
+                            maxLines: 2,
+                            onChanged: vm.setExchangeFor,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: TradeLinkSpacing.lg),
+
+                  // Section 3: Chi tiết món hàng
+                  TradeLinkCard(
+                    padding: const EdgeInsets.all(TradeLinkSpacing.md),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.description_outlined, size: 20, color: TradeLinkColors.primaryContainer),
+                            const SizedBox(width: TradeLinkSpacing.sm),
+                            Text(
+                              'Chi tiết món hàng',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: TradeLinkSpacing.lg),
+                        TextField(
+                          controller: TextEditingController(text: vm.description),
+                          style: theme.textTheme.bodyLarge,
+                          decoration: InputDecoration(
+                            labelText: 'Mô tả chi tiết',
+                            hintText: 'Mô tả tình trạng, phụ kiện đi kèm, bảo hành...',
+                            errorText: vm.descriptionError,
+                            filled: true,
+                            fillColor: TradeLinkColors.surfaceContainerLowest,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(TradeLinkRadii.md),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(TradeLinkRadii.md),
+                              borderSide: const BorderSide(color: TradeLinkColors.outlineVariant),
+                            ),
+                          ),
+                          maxLines: 4,
+                          onChanged: vm.setDescription,
+                        ),
+                        const SizedBox(height: TradeLinkSpacing.md),
+                        DropdownButtonFormField<String>(
+                          value: vm.category,
+                          decoration: InputDecoration(
+                            labelText: 'Danh mục',
+                            filled: true,
+                            fillColor: TradeLinkColors.surfaceContainerLowest,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(TradeLinkRadii.md),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(TradeLinkRadii.md),
+                              borderSide: const BorderSide(color: TradeLinkColors.outlineVariant),
+                            ),
+                          ),
+                          items: CreateListingViewModel.categories
+                              .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                              .toList(),
+                          onChanged: (v) => vm.setCategory(v!),
+                        ),
+                        const SizedBox(height: TradeLinkSpacing.md),
+                        Text(
+                          'Tình trạng',
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: TradeLinkColors.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: TradeLinkSpacing.xs),
+                        Wrap(
+                          spacing: TradeLinkSpacing.sm,
+                          runSpacing: TradeLinkSpacing.xs,
+                          children: ItemCondition.values.map((c) => ChoiceChip(
+                            label: Text(c == ItemCondition.new_
+                                ? 'Mới'
+                                : c == ItemCondition.likeNew
+                                    ? 'Như mới'
+                                    : 'Đã qua sử dụng'),
+                            selected: vm.condition == c,
+                            onSelected: (_) => vm.setCondition(c),
+                            showCheckmark: false,
+                            selectedColor: TradeLinkColors.primaryContainer.withValues(alpha: 0.15),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(TradeLinkRadii.full),
+                              side: BorderSide(
+                                color: vm.condition == c
+                                    ? TradeLinkColors.primaryContainer
+                                    : TradeLinkColors.outlineVariant,
+                              ),
+                            ),
+                          )).toList(),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: TradeLinkSpacing.xl),
+                  
+                  // Action Button
+                  TradeLinkButton.cta(
+                    label: 'Đăng tin ngay',
+                    icon: Icons.rocket_launch_outlined,
+                    isLoading: vm.state is ui.Loading,
+                    onPressed: vm.state is ui.Loading ? null : () async => await vm.publish(),
+                  ),
+                  if (vm.state is ui.Error) ...[
+                    const SizedBox(height: TradeLinkSpacing.sm),
+                    Container(
+                      padding: const EdgeInsets.all(TradeLinkSpacing.sm),
+                      decoration: BoxDecoration(
+                        color: TradeLinkColors.error.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(TradeLinkRadii.md),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.error_outline, color: TradeLinkColors.error, size: 16),
+                          const SizedBox(width: TradeLinkSpacing.xs),
+                          Expanded(
+                            child: Text(
+                              (vm.state as ui.Error).message,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: TradeLinkColors.error,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
               ),
-              onChanged: vm.setTitle,
             ),
-            const SizedBox(height: TradeLinkSpacing.md),
-            if (vm.type != ListingType.trade) ...[
-              TextField(
-                style: theme.textTheme.bodyLarge,
-                decoration: InputDecoration(
-                  labelText: 'Giá bán (VNĐ)',
-                  hintText: 'VD: 45000000',
-                  prefixIcon: const Icon(Icons.monetization_on_outlined),
-                  errorText: vm.priceError,
-                ),
-                keyboardType: TextInputType.number,
-                onChanged: vm.setPrice,
-              ),
-              const SizedBox(height: TradeLinkSpacing.md),
-            ],
-            if (vm.type != ListingType.sale) ...[
-              TextField(
-                decoration: InputDecoration(
-                  labelText: 'Mô tả món đồ muốn đổi lấy',
-                  hintText: 'VD: Đổi lấy Samsung S24 Ultra',
-                  errorText: vm.exchangeForError,
-                ),
-                maxLines: 2,
-                onChanged: vm.setExchangeFor,
-              ),
-              const SizedBox(height: TradeLinkSpacing.md),
-            ],
-            TextField(
-              style: theme.textTheme.bodyLarge,
-              decoration: InputDecoration(
-                labelText: 'Mô tả chi tiết',
-                hintText: 'Mô tả tình trạng, phụ kiện đi kèm...',
-                errorText: vm.descriptionError,
-              ),
-              maxLines: 4,
-              onChanged: vm.setDescription,
-            ),
-            const SizedBox(height: TradeLinkSpacing.md),
-            DropdownButtonFormField<String>(
-              initialValue: vm.category,
-              decoration: const InputDecoration(labelText: 'Danh mục'),
-              items: CreateListingViewModel.categories
-                  .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                  .toList(),
-              onChanged: (v) => vm.setCategory(v!),
-            ),
-            const SizedBox(height: TradeLinkSpacing.md),
-            Text(
-              'Tình trạng',
-              style: theme.textTheme.labelLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: TradeLinkSpacing.xs),
-            Wrap(
-              spacing: TradeLinkSpacing.xs,
-              children: ItemCondition.values.map((c) => ChoiceChip(
-                label: Text(c == ItemCondition.new_
-                    ? 'Mới'
-                    : c == ItemCondition.likeNew
-                        ? 'Như mới'
-                        : 'Đã qua sử dụng'),
-                selected: vm.condition == c,
-                onSelected: (_) => vm.setCondition(c),
-              )).toList(),
-            ),
-            const SizedBox(height: TradeLinkSpacing.xl),
-            TradeLinkButton.cta(
-              label: 'Đăng tin',
-              icon: Icons.send_outlined,
-              isLoading: vm.state is ui.Loading,
-              onPressed: vm.state is ui.Loading ? null : () async => await vm.publish(),
-            ),
-            if (vm.state is ui.Error) ...[
-              const SizedBox(height: TradeLinkSpacing.sm),
-              Text(
-                (vm.state as ui.Error).message,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: TradeLinkColors.error,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
           ],
         ),
       ),

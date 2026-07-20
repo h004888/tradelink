@@ -45,7 +45,7 @@ class _Body extends StatelessWidget {
           ),
           IconButton(
             icon: const Icon(Icons.note_add_outlined),
-            tooltip: 'Tin nháp',
+            tooltip: 'Nháp tin đăng',
             onPressed: () => context.push(AppPaths.draftListings),
           ),
         ],

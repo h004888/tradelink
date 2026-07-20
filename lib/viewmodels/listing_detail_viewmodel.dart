@@ -12,6 +12,9 @@ class ListingDetailViewModel extends ChangeNotifier {
 
   UiState<Listing> _state = const Loading();
   UiState<Listing> get state => _state;
+  
+  bool _isOwner = false;
+  bool get isOwner => _isOwner;
 
   Listing? get listing => _state is Success<Listing> ? (_state as Success<Listing>).data : null;
 
@@ -21,7 +24,9 @@ class ListingDetailViewModel extends ChangeNotifier {
     _state = const Loading(); notifyListeners();
     final result = await _repository.getListingById(listingId);
     switch (result) {
-      case ResultSuccess(data: final l): _state = Success(l);
+      case ResultSuccess(data: final l): 
+        _state = Success(l);
+        _isOwner = l.sellerId == 'user-001';
       case FailureResult(failure: final f): _state = Error(message: f.message, retryable: true);
     }
     notifyListeners();
@@ -29,4 +34,9 @@ class ListingDetailViewModel extends ChangeNotifier {
 
   void edit(BuildContext context) => context.push('${AppPaths.editListing}/$listingId');
   void boost(BuildContext context) => context.push('${AppPaths.boostListing}/$listingId');
+  
+  Future<void> delete(BuildContext context) async {
+    await _repository.deleteListing(listingId);
+    if (context.mounted) context.pop();
+  }
 }

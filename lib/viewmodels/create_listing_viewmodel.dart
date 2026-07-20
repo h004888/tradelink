@@ -12,6 +12,21 @@ class CreateListingViewModel extends ChangeNotifier {
   final ListingRepository _repository = ListingRepository();
   final UploadRepository _upload = UploadRepository();
   final ImagePicker _picker = ImagePicker();
+  
+  final Listing? draft;
+
+  CreateListingViewModel({this.draft}) {
+    if (draft != null) {
+      _type = draft!.type;
+      _title = draft!.title;
+      _description = draft!.description;
+      _price = draft!.price;
+      _exchangeFor = draft!.exchangeFor;
+      _category = draft!.category.isNotEmpty ? draft!.category : 'Điện tử';
+      _condition = draft!.condition;
+      _imageUrls.addAll(draft!.imageUrls);
+    }
+  }
 
   UiState<Listing> _state = const Idle();
   UiState<Listing> get state => _state;
@@ -179,8 +194,8 @@ class CreateListingViewModel extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     final draftList = prefs.getStringList('draft_listings') ?? [];
     
-    final draft = {
-      'id': 'draft-${DateTime.now().millisecondsSinceEpoch}',
+    final draftObj = {
+      'id': draft?.id ?? 'draft-${DateTime.now().millisecondsSinceEpoch}',
       'title': _title,
       'description': _description,
       'price': _price,
@@ -192,7 +207,24 @@ class CreateListingViewModel extends ChangeNotifier {
       'createdAt': DateTime.now().toIso8601String(),
     };
     
-    draftList.add(jsonEncode(draft));
+    if (draft != null) {
+      // Update existing
+      final index = draftList.indexWhere((s) {
+        try {
+          return jsonDecode(s)['id'] == draft!.id;
+        } catch (_) {
+          return false;
+        }
+      });
+      if (index >= 0) {
+        draftList[index] = jsonEncode(draftObj);
+      } else {
+        draftList.add(jsonEncode(draftObj));
+      }
+    } else {
+      draftList.add(jsonEncode(draftObj));
+    }
+    
     await prefs.setStringList('draft_listings', draftList);
     
     _state = const Idle();
