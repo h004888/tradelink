@@ -1,19 +1,46 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../../core/result.dart';
 import '../../core/ui_state.dart';
 import '../../repositories/notification_repository.dart';
+import '../../services/chat_socket.dart';
 
 class NotificationsViewModel extends ChangeNotifier {
-  final NotificationRepository _repo = NotificationRepository();
+  final NotificationRepository _repo;
+  StreamSubscription<AppNotification>? _notificationSub;
   UiState<List<AppNotification>> _state = const Loading();
   UiState<List<AppNotification>> get state => _state;
 
-  NotificationsViewModel() { load(); }
+  NotificationsViewModel({
+    NotificationRepository? repository,
+    Stream<AppNotification>? notificationStream,
+  }) : _repo = repository ?? NotificationRepository() {
+    load();
+    _notificationSub =
+        (notificationStream ?? ChatSocket.instance.watchNotifications()).listen(
+          _prepend,
+        );
+  }
+
+  void _prepend(AppNotification notification) {
+    final s = _state;
+    if (s is! Success<List<AppNotification>>) return;
+    if (s.data.any((n) => n.id == notification.id)) return;
+    _state = Success([notification, ...s.data]);
+    notifyListeners();
+  }
 
   Future<void> load() async {
-    _state = const Loading(); notifyListeners();
+    _state = const Loading();
+    notifyListeners();
     final r = await _repo.getAll();
-    switch (r) { case ResultSuccess(data: final list): _state = Success(list); case FailureResult(failure: final f): _state = Error(message: f.message); }
+    switch (r) {
+      case ResultSuccess(data: final list):
+        _state = Success(list);
+      case FailureResult(failure: final f):
+        _state = Error(message: f.message);
+    }
     notifyListeners();
   }
 
@@ -41,5 +68,11 @@ class NotificationsViewModel extends ChangeNotifier {
       _state = Success([for (final n in s.data) n.copyWith(isRead: true)]);
       notifyListeners();
     }
+  }
+
+  @override
+  void dispose() {
+    _notificationSub?.cancel();
+    super.dispose();
   }
 }

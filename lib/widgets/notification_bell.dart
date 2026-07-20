@@ -1,28 +1,53 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/result.dart';
 import '../repositories/notification_repository.dart';
+import '../services/chat_socket.dart';
 import '../utils/constants.dart';
 import 'notification_badge.dart';
 
 /// Icon chuông thông báo — tự tải số lượng chưa đọc và hiện badge.
 /// Tự refresh sau khi quay lại từ màn Thông báo (đã đọc bớt).
 class NotificationBell extends StatefulWidget {
-  const NotificationBell({super.key});
+  const NotificationBell({
+    super.key,
+    NotificationRepository? repository,
+    Stream<AppNotification>? notificationStream,
+  }) : _repository = repository,
+       _notificationStream = notificationStream;
+
+  final NotificationRepository? _repository;
+  final Stream<AppNotification>? _notificationStream;
 
   @override
   State<NotificationBell> createState() => _NotificationBellState();
 }
 
 class _NotificationBellState extends State<NotificationBell> {
-  final _repo = NotificationRepository();
+  late final NotificationRepository _repo =
+      widget._repository ?? NotificationRepository();
+  StreamSubscription<AppNotification>? _notificationSub;
   int _unreadCount = 0;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _notificationSub =
+        (widget._notificationStream ?? ChatSocket.instance.watchNotifications())
+            .listen((n) {
+              if (!mounted || n.isRead) return;
+              setState(() => _unreadCount += 1);
+            });
+  }
+
+  @override
+  void dispose() {
+    _notificationSub?.cancel();
+    super.dispose();
   }
 
   Future<void> _load() async {
