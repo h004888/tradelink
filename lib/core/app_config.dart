@@ -57,8 +57,10 @@ class AppConfig {
   static String _detectPlatformUrl() {
     try {
       if (Platform.isAndroid) {
-        // Android emulator: dùng localhost + adb reverse để bypass firewall
-        return 'http://localhost:3000/api/v1';
+        // Android emulator: 10.0.2.2 là alias built-in trỏ về host machine —
+        // hoạt động ngay không cần chạy `adb reverse` mỗi lần mở lại emulator.
+        // Máy thật cần LAN IP thật của máy chạy backend, set qua Env.baseUrl.
+        return 'http://10.0.2.2:3000/api/v1';
       }
       if (Platform.isIOS) {
         // iOS simulator dùng localhost
