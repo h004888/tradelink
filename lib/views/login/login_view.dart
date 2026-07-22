@@ -319,43 +319,6 @@ class _LoginBodyState extends State<_LoginBody>
 
                             const SizedBox(height: TradeLinkSpacing.md),
 
-                            OutlinedButton.icon(
-                              onPressed: vm.state is Loading
-                                  ? null
-                                  : () async {
-                                      final ok = await vm.loginWithGoogle();
-                                      if (ok && context.mounted) {
-                                        final redirect = vm.redirectPath;
-                                        if (redirect != null &&
-                                            redirect.isNotEmpty) {
-                                          context.go(redirect);
-                                        } else {
-                                          context.go(AppPaths.home);
-                                        }
-                                      }
-                                    },
-                              icon: const Icon(Icons.g_mobiledata_rounded, size: 24),
-                              label: const Text('Đăng nhập bằng Google'),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: TradeLinkColors.onSurface,
-                                side: BorderSide(
-                                  color: TradeLinkColors.outlineVariant
-                                      .withValues(alpha: 0.7),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: TradeLinkSpacing.md,
-                                  horizontal: TradeLinkSpacing.md,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(
-                                    TradeLinkRadii.lg,
-                                  ),
-                                ),
-                              ),
-                            ),
-
-                            const SizedBox(height: TradeLinkSpacing.md),
-
                             // Bottom links
                             Row(
                               mainAxisAlignment:
