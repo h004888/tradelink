@@ -95,7 +95,9 @@ class ItemDetailViewModel extends ChangeNotifier {
       notifyListeners();
       return;
     }
-    final res = await _watchlist.toggleSave(itemId, _isSaved);
+    final s = _state;
+    if (s is! Success<Listing>) return;
+    final res = await _watchlist.toggleSave(s.data, _isSaved);
     if (res is ResultSuccess<bool>) {
       _isSaved = res.data;
       notifyListeners();

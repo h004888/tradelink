@@ -1,105 +1,97 @@
+import 'dart:convert';
+
+import 'package:path/path.dart' as p;
+import 'package:sqflite/sqflite.dart';
+
 import '../core/api_client.dart';
 import '../core/result.dart';
 import '../models/listing_model.dart';
 
+/// Watchlist lưu HOÀN TOÀN LOCAL trên máy qua SQLite — không gọi API server.
+/// Mỗi user (theo userId hiện tại) có danh sách riêng, dùng chung 1 database
+/// trên thiết bị (an toàn khi nhiều tài khoản đăng nhập chung máy).
 class WatchlistRepository {
-  final _api = ApiClient.instance;
+  static Database? _db;
 
-  Listing _fromListingJson(Map<String, dynamic> j) {
-    return Listing(
-      id: j['_id']?.toString() ?? '',
-      title: j['title']?.toString() ?? '',
-      description: j['description']?.toString() ?? '',
-      price: (j['price'] as num?)?.toDouble(),
-      imageUrls: (j['imageUrls'] as List?)?.map((e) => e.toString()).toList() ?? const [],
-      category: j['category']?.toString() ?? '',
-      condition: _condFromString(j['condition']?.toString()),
-      type: _typeFromString(j['type']?.toString()),
-      status: ListingStatus.active,
-      sellerId: j['sellerId']?.toString() ?? '',
-      sellerName: j['sellerName']?.toString() ?? '',
-      views: (j['views'] as num?)?.toInt() ?? 0,
-      interests: 0,
-      saves: (j['saves'] as num?)?.toInt() ?? 0,
-      createdAt: DateTime.tryParse(j['createdAt']?.toString() ?? '') ?? DateTime.now(),
-      boostExpiry: j['boostExpiry'] != null ? DateTime.tryParse(j['boostExpiry'].toString()) : null,
+  Future<Database> _database() async {
+    if (_db != null) return _db!;
+    final dbPath = await getDatabasesPath();
+    final path = p.join(dbPath, 'tradelink_watchlist.db');
+    _db = await openDatabase(
+      path,
+      version: 1,
+      onCreate: (db, version) async {
+        await db.execute('''
+          CREATE TABLE watchlist (
+            user_id TEXT NOT NULL,
+            listing_id TEXT NOT NULL,
+            listing_json TEXT NOT NULL,
+            saved_at INTEGER NOT NULL,
+            PRIMARY KEY (user_id, listing_id)
+          )
+        ''');
+      },
     );
+    return _db!;
   }
 
+  String get _userId => ApiClient.instance.getUserId() ?? 'anonymous';
+
   Future<Result<bool>> isSaved(String listingId) async {
-    final res = await _api.get('/watchlist/check/$listingId');
-    if (res is FailureResult<Map<String, dynamic>>) {
-      return FailureResult<bool>(res.failure);
-    }
-    final success = res as ResultSuccess<Map<String, dynamic>>;
-    final data = success.data['data'] as Map?;
-    final saved = (data?['saved'] as bool?) ?? false;
-    return ResultSuccess<bool>(saved);
+    final db = await _database();
+    final rows = await db.query(
+      'watchlist',
+      where: 'user_id = ? AND listing_id = ?',
+      whereArgs: [_userId, listingId],
+      limit: 1,
+    );
+    return ResultSuccess<bool>(rows.isNotEmpty);
   }
 
   /// Toggle trạng thái lưu: nếu đang lưu thì bỏ, ngược lại thì lưu.
-  Future<Result<bool>> toggleSave(String listingId, bool currentlySaved) async {
-    return currentlySaved ? await unsave(listingId) : await save(listingId);
+  Future<Result<bool>> toggleSave(Listing listing, bool currentlySaved) async {
+    return currentlySaved ? await unsave(listing.id) : await save(listing);
   }
 
-  Future<Result<bool>> save(String listingId) async {
-    final res = await _api.post('/watchlist', body: {'listingId': listingId});
-    return switch (res) {
-      ResultSuccess() => ResultSuccess<bool>(true),
-      FailureResult(failure: final f) => FailureResult<bool>(f),
-    };
+  /// Lưu snapshot đầy đủ của listing (không chỉ id) để màn Watchlist hiển thị
+  /// được ảnh/tên/giá mà không cần gọi mạng.
+  Future<Result<bool>> save(Listing listing) async {
+    final db = await _database();
+    await db.insert(
+      'watchlist',
+      {
+        'user_id': _userId,
+        'listing_id': listing.id,
+        'listing_json': jsonEncode(listing.toJson()),
+        'saved_at': DateTime.now().millisecondsSinceEpoch,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    return const ResultSuccess<bool>(true);
   }
 
   Future<Result<bool>> unsave(String listingId) async {
-    final res = await _api.delete('/watchlist/$listingId');
-    return switch (res) {
-      ResultSuccess() => ResultSuccess<bool>(true),
-      FailureResult(failure: final f) => FailureResult<bool>(f),
-    };
+    final db = await _database();
+    await db.delete(
+      'watchlist',
+      where: 'user_id = ? AND listing_id = ?',
+      whereArgs: [_userId, listingId],
+    );
+    return const ResultSuccess<bool>(true);
   }
 
   Future<Result<List<Listing>>> getAll() async {
-    final res = await _api.get('/watchlist');
-    return switch (res) {
-      ResultSuccess(data: final d) => ResultSuccess<List<Listing>>(
-          ((d['data'] as List?) ?? [])
-              .map((e) {
-                // Backend có thể populate listingId (Map) hoặc chỉ trả ObjectId (String)
-                // → Handle cả 2 trường hợp
-                final rawListingId = (e as Map<String, dynamic>)['listingId'];
-                if (rawListingId is String) {
-                  // Chỉ có ID, không có data → tạo Listing rỗng với ID
-                  return Listing(
-                    id: rawListingId,
-                    title: '',
-                    description: '',
-                    category: '',
-                    condition: ItemCondition.used,
-                    type: ListingType.sale,
-                    status: ListingStatus.active,
-                    sellerId: '',
-                    sellerName: '',
-                    createdAt: DateTime.now(),
-                  );
-                }
-                return _fromListingJson(
-                    rawListingId as Map<String, dynamic>? ?? {});
-              })
-              .toList(),
-        ),
-      FailureResult(failure: final f) => FailureResult<List<Listing>>(f),
-    };
+    final db = await _database();
+    final rows = await db.query(
+      'watchlist',
+      where: 'user_id = ?',
+      whereArgs: [_userId],
+      orderBy: 'saved_at DESC',
+    );
+    final items = rows
+        .map((r) => Listing.fromJson(
+            jsonDecode(r['listing_json'] as String) as Map<String, dynamic>))
+        .toList();
+    return ResultSuccess<List<Listing>>(items);
   }
-
-  ItemCondition _condFromString(String? s) => switch (s) {
-        'new' => ItemCondition.new_,
-        'likeNew' => ItemCondition.likeNew,
-        _ => ItemCondition.used,
-      };
-
-  ListingType _typeFromString(String? s) => switch (s) {
-        'trade' => ListingType.trade,
-        'both' => ListingType.both,
-        _ => ListingType.sale,
-      };
 }

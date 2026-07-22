@@ -37,10 +37,4 @@ class WatchlistViewModel extends ChangeNotifier {
       notifyListeners();
     }
   }
-
-  Future<bool> toggleSave(String listingId, bool currentlySaved) async {
-    final res = currentlySaved ? await _repository.unsave(listingId) : await _repository.save(listingId);
-    if (res is ResultSuccess<bool>) return !currentlySaved;
-    return currentlySaved;
-  }
 }

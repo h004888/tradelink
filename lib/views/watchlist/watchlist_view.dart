@@ -67,11 +67,9 @@ class _WatchlistBody extends StatelessWidget {
                 // (top-level route, có sẵn logic check `isCurrentUserSeller`:
                 // - Seller → "Quản lý tin đăng"
                 // - Buyer → "Mua an toàn" / "Gửi offer" / "Nhắn người bán")
-                //
-                // Dùng `context.go` thay vì `context.push` để tránh key collision
                 onTap: item.id.isEmpty
                     ? null
-                    : () => context.go('${AppPaths.itemDetail}/${item.id}'),
+                    : () => context.push('${AppPaths.itemDetail}/${item.id}'),
                 padding: EdgeInsets.zero,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
