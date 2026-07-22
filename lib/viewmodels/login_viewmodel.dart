@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import '../../core/result.dart';
 import '../../core/ui_state.dart';
 import '../../repositories/auth_repository.dart';
@@ -28,61 +27,6 @@ class LoginViewModel extends ChangeNotifier {
   void toggleObscure() {
     _obscurePassword = !_obscurePassword;
     notifyListeners();
-  }
-
-  Future<bool> loginWithGoogle() async {
-    _state = const Loading();
-    notifyListeners();
-
-    try {
-      final googleSignIn = GoogleSignIn(
-        scopes: const ['email', 'profile'],
-      );
-      final account = await googleSignIn.signIn();
-      if (account == null) {
-        _state = const Idle();
-        notifyListeners();
-        return false;
-      }
-
-      final auth = await account.authentication;
-      final idToken = auth.idToken;
-      if (idToken == null || idToken.isEmpty) {
-        _state = Error(
-          message: 'Không lấy được Google ID token',
-          retryable: true,
-        );
-        notifyListeners();
-        return false;
-      }
-
-      final result = await _repository.loginWithGoogle(idToken);
-      if (result is ResultSuccess<bool>) {
-        _state = const Success(null);
-        AnalyticsService.instance.track(
-          'login_google_success',
-          properties: _redirectPath != null ? {'redirected': true} : null,
-        );
-        notifyListeners();
-        return true;
-      }
-
-      final f = (result as FailureResult<bool>).failure;
-      _state = Error(message: f.message, retryable: true);
-      AnalyticsService.instance.track(
-        'login_google_failed',
-        properties: {'reason': f.message},
-      );
-      notifyListeners();
-      return false;
-    } catch (e) {
-      _state = Error(
-        message: 'Đăng nhập Google thất bại: $e',
-        retryable: true,
-      );
-      notifyListeners();
-      return false;
-    }
   }
 
   Future<bool> login() async {

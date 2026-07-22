@@ -49,11 +49,6 @@ class AuthRepository {
     return _setTokenFromResult(res);
   }
 
-  Future<Result<bool>> loginWithGoogle(String idToken) async {
-    final res = await _api.post('/auth/google', body: {'idToken': idToken});
-    return _setTokenFromResult(res);
-  }
-
   /// Khi token hết hạn, client gọi endpoint /refresh với refreshToken để lấy token mới.
   /// Backend thực hiện refresh token rotation: token cũ bị vô hiệu, cấp cả access + refresh mới.
   Future<Result<bool>> refreshToken() async {
