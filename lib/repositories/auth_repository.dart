@@ -16,4 +16,28 @@ class AuthRepository {
       FailureResult(failure: final f) => FailureResult<Map<String, dynamic>>(f),
     };
   }
+
+  Future<Result<Map<String, dynamic>>> register(
+    String email,
+    String password,
+    String name, {
+    String? phone,
+    String? address,
+  }) async {
+    final body = <String, dynamic>{
+      'email': email,
+      'password': password,
+      'fullName': name,
+      'phone': phone,
+    };
+    if (address != null && address.isNotEmpty) body['address'] = address;
+
+    final res = await _api.post('/auth/register', body: body);
+    return switch (res) {
+      ResultSuccess(data: final d) => ResultSuccess<Map<String, dynamic>>(
+        d['data'] ?? {},
+      ),
+      FailureResult(failure: final f) => FailureResult<Map<String, dynamic>>(f),
+    };
+  }
 }
