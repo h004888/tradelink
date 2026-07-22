@@ -9,6 +9,7 @@ import '../../repositories/listing_repository.dart';
 import '../../repositories/upload_repository.dart';
 import '../../core/events.dart';
 import '../../core/api_client.dart';
+import 'home_category_viewmodel.dart' show CategoryItem;
 
 class CreateListingViewModel extends ChangeNotifier {
   final ListingRepository _repository = ListingRepository();
@@ -24,10 +25,12 @@ class CreateListingViewModel extends ChangeNotifier {
       _description = draft!.description;
       _price = draft!.price;
       _exchangeFor = draft!.exchangeFor;
-      _category = draft!.category.isNotEmpty ? draft!.category : 'Điện tử';
+      _category = draft!.category;
+      _categoryId = draft!.categoryId;
       _condition = draft!.condition;
       _imageUrls.addAll(draft!.imageUrls);
     }
+    _loadCategories();
   }
 
   UiState<Listing> _state = const Idle();
@@ -58,8 +61,12 @@ class CreateListingViewModel extends ChangeNotifier {
   String? get exchangeFor => _exchangeFor;
   String? _exchangeForError;
   String? get exchangeForError => _exchangeForError;
-  String _category = 'Điện tử';
+  String _category = '';
   String get category => _category;
+  String? _categoryId;
+  String? get categoryId => _categoryId;
+  UiState<List<CategoryItem>> _categoriesState = const Loading();
+  UiState<List<CategoryItem>> get categoriesState => _categoriesState;
   ItemCondition _condition = ItemCondition.used;
   ItemCondition get condition => _condition;
   final List<String> _imageUrls = [];
@@ -69,7 +76,24 @@ class CreateListingViewModel extends ChangeNotifier {
   String? _imageError;
   String? get imageError => _imageError;
 
-  static const List<String> categories = ['Điện tử', 'Điện thoại', 'Phụ kiện', 'Xe cộ', 'Nội thất', 'Thời trang', 'Sách', 'Khác'];
+  /// Danh mục thật lấy từ server — trước đây là list cứng, khiến tin đăng không
+  /// bao giờ có categoryId hợp lệ nên bị lọt khỏi filter "Danh mục" khi tìm kiếm.
+  Future<void> _loadCategories() async {
+    final res = await ApiClient.instance.get('/categories');
+    if (res is ResultSuccess<Map<String, dynamic>>) {
+      final list = ((res.data['data'] as List?) ?? [])
+          .map((e) => CategoryItem.fromJson(e as Map<String, dynamic>))
+          .toList();
+      _categoriesState = Success(list);
+      if (_categoryId == null && list.isNotEmpty) {
+        _categoryId = list.first.id;
+        _category = list.first.name;
+      }
+    } else {
+      _categoriesState = Error(message: 'Không tải được danh mục', retryable: true);
+    }
+    notifyListeners();
+  }
 
   int get completionPercent {
     int filled = 0;
@@ -94,7 +118,11 @@ class CreateListingViewModel extends ChangeNotifier {
   void setDescription(String v) { _description = v; if (_descriptionError != null) { _descriptionError = null; notifyListeners(); } }
   void setPrice(String v) { _price = double.tryParse(v); if (_priceError != null) { _priceError = null; notifyListeners(); } }
   void setExchangeFor(String v) { _exchangeFor = v; if (_exchangeForError != null) { _exchangeForError = null; notifyListeners(); } }
-  void setCategory(String v) { _category = v; notifyListeners(); }
+  void setCategory(String id, String name) {
+    _categoryId = id;
+    _category = name;
+    notifyListeners();
+  }
   void setCondition(ItemCondition c) { _condition = c; notifyListeners(); }
 
   /// Mở image picker, upload ảnh đã chọn, lưu URL trả về vào imageUrls.
@@ -171,6 +199,7 @@ class CreateListingViewModel extends ChangeNotifier {
       exchangeFor: _exchangeFor,
       imageUrls: _imageUrls,
       category: _category,
+      categoryId: _categoryId,
       condition: _condition,
       type: _type,
       sellerId: ApiClient.instance.getUserId() ?? 'unknown-user',
@@ -245,7 +274,13 @@ class CreateListingViewModel extends ChangeNotifier {
     _priceError = null;
     _exchangeFor = null;
     _exchangeForError = null;
-    _category = 'Điện tử';
+    if (_categoriesState case Success(data: final cats) when cats.isNotEmpty) {
+      _categoryId = cats.first.id;
+      _category = cats.first.name;
+    } else {
+      _categoryId = null;
+      _category = '';
+    }
     _condition = ItemCondition.used;
     _imageUrls.clear();
     _localImages.clear();

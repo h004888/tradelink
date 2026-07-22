@@ -38,14 +38,19 @@ class ProfileRepository {
   Future<Result<Profile>> updateProfile(Profile updated) async {
     final body = <String, dynamic>{
       'fullName': updated.fullName,
-      'phone': updated.phone,
-      'address': updated.address,
       'avatar': updated.avatar,
       'badges': updated.badges,
       'bankName': updated.bankName,
       'bankAccountNumber': updated.bankAccountNumber,
       'bankAccountHolder': updated.bankAccountHolder,
     };
+    // phone/address có ràng buộc min-length ở server (optional() không cho phép chuỗi
+    // rỗng) — chỉ gửi lên khi có giá trị thật, tránh làm validate fail toàn bộ request
+    // (kể cả bankName/bankAccountNumber cũng không lưu được) chỉ vì address rỗng.
+    if (updated.phone.trim().isNotEmpty) body['phone'] = updated.phone;
+    if (updated.address != null && updated.address!.trim().isNotEmpty) {
+      body['address'] = updated.address;
+    }
     if (updated.latitude != null) body['latitude'] = updated.latitude;
     if (updated.longitude != null) body['longitude'] = updated.longitude;
     final res = await _api.put('/users/profile', body: body);

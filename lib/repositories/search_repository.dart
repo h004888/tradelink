@@ -71,6 +71,16 @@ class SearchRepository {
     };
   }
 
+  Future<Result<List<String>>> getPopularSearches() async {
+    final res = await _api.get('/search/popular');
+    return switch (res) {
+      ResultSuccess(data: final d) => ResultSuccess<List<String>>(
+          ((d['data'] as List?) ?? []).map((e) => e.toString()).toList(),
+        ),
+      FailureResult(failure: final f) => FailureResult<List<String>>(f),
+    };
+  }
+
   Future<Result<SearchSuggestions>> getSuggestions(String query) async {
     if (query.length < 2) {
       return const ResultSuccess(SearchSuggestions(categories: [], products: []));

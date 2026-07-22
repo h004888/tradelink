@@ -12,9 +12,21 @@ import '../../widgets/loading_skeleton.dart';
 import '../../widgets/tradelink_app_bar.dart';
 import '../../widgets/tradelink_card.dart';
 
+/// Nhận diện deeplink cũ dạng `/transactions/<id>` (thiếu `/sale` hoặc `/trade`)
+/// — không khớp route nào đã đăng ký trong router.dart, gây GoException.
+final _bareTransactionDeeplink = RegExp(r'^/transactions/[0-9a-fA-F]{24}$');
+
 String? notificationRoute(AppNotification n) {
   final deeplink = n.deeplink;
-  if (deeplink != null && deeplink.startsWith('/')) return deeplink;
+  if (deeplink != null && deeplink.startsWith('/')) {
+    if (_bareTransactionDeeplink.hasMatch(deeplink)) {
+      final id = deeplink.split('/').last;
+      return '${AppPaths.transactionSale}/$id';
+    }
+    // Deeplink cũ '/offers' (thiếu '/list') — không khớp route đã đăng ký.
+    if (deeplink == '/offers') return AppPaths.offersList;
+    return deeplink;
+  }
 
   final entityId = n.entityId;
   switch (n.entityType) {

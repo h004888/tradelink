@@ -63,6 +63,15 @@ class _VerifyEmailViewState extends State<VerifyEmailView>
 
     return Scaffold(
       backgroundColor: TradeLinkColors.surface,
+      appBar: AppBar(
+        backgroundColor: TradeLinkColors.surface,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go(AppPaths.login),
+        ),
+      ),
       body: SafeArea(
         child: FadeTransition(
           opacity: _fade,

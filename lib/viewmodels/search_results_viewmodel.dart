@@ -50,7 +50,7 @@ class SearchResultsViewModel extends ChangeNotifier {
   SearchSort get sort => _sort;
 
   bool get hasActiveFilters =>
-      _categoryId != null || _minPrice != null || _maxPrice != null || _sort != SearchSort.relevance;
+      _typeFilter != null || _categoryId != null || _minPrice != null || _maxPrice != null || _sort != SearchSort.relevance;
 
   // ── Suggestions state ──
   SearchSuggestions? _suggestions;
@@ -65,14 +65,25 @@ class SearchResultsViewModel extends ChangeNotifier {
   List<String> _recentSearches = [];
   List<String> get recentSearches => _recentSearches;
 
-  static const List<String> _popularSearches = [
+  // Dùng tạm khi chưa có dữ liệu tìm kiếm thật (server chưa đủ log) hoặc gọi API lỗi.
+  static const List<String> _fallbackPopularSearches = [
     'iPhone', 'Laptop', 'Xe máy', 'Đồng hồ', 'Túi xách',
     'Máy ảnh', 'Tai nghe', 'Sách', 'Ghế văn phòng', 'Điện thoại',
   ];
+  List<String> _popularSearches = _fallbackPopularSearches;
   List<String> get popularSearches => _popularSearches;
 
   SearchResultsViewModel() {
     _loadRecentSearches();
+    _loadPopularSearches();
+  }
+
+  Future<void> _loadPopularSearches() async {
+    final result = await _repository.getPopularSearches();
+    if (result is ResultSuccess<List<String>> && result.data.isNotEmpty) {
+      _popularSearches = result.data;
+      notifyListeners();
+    }
   }
 
   @override
@@ -210,7 +221,27 @@ class SearchResultsViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Áp dụng đồng thời danh mục + khoảng giá + sắp xếp bằng 1 lần search() duy nhất.
+  /// Tránh gọi setCategoryFilter/setPriceRange/setSort liên tiếp — mỗi hàm tự bắn
+  /// một search() async riêng, dẫn tới race condition khi response về không đúng thứ tự.
+  void applyFilters({
+    String? categoryId,
+    String? categoryName,
+    double? minPrice,
+    double? maxPrice,
+    required SearchSort sort,
+  }) {
+    _categoryId = categoryId;
+    _categoryName = categoryId == null ? null : categoryName;
+    _minPrice = minPrice;
+    _maxPrice = maxPrice;
+    _sort = sort;
+    if (_query.isNotEmpty) search(_query);
+    notifyListeners();
+  }
+
   void clearFilters() {
+    _typeFilter = null;
     _categoryId = null;
     _categoryName = null;
     _minPrice = null;

@@ -128,6 +128,7 @@ class ListingRepository {
       'exchangeFor': listing.exchangeFor,
       'imageUrls': listing.imageUrls,
       'category': listing.category,
+      'categoryId': listing.categoryId,
       'condition': listing.condition.name.replaceAll('_', ''),
       'type': listing.type.name,
     });
@@ -145,6 +146,7 @@ class ListingRepository {
       'exchangeFor': listing.exchangeFor,
       'imageUrls': listing.imageUrls,
       'category': listing.category,
+      'categoryId': listing.categoryId,
       'condition': listing.condition.name.replaceAll('_', ''),
       'type': listing.type.name,
       'status': listing.status.name,
