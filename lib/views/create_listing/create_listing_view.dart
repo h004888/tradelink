@@ -322,25 +322,37 @@ class _CreateListingBody extends StatelessWidget {
                           onChanged: vm.setDescription,
                         ),
                         const SizedBox(height: TradeLinkSpacing.md),
-                        DropdownButtonFormField<String>(
-                          value: vm.category,
-                          decoration: InputDecoration(
-                            labelText: 'Danh mục',
-                            filled: true,
-                            fillColor: TradeLinkColors.surfaceContainerLowest,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(TradeLinkRadii.md),
+                        switch (vm.categoriesState) {
+                          ui.Loading() => const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 12),
+                              child: Center(
+                                child: SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                              ),
                             ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(TradeLinkRadii.md),
-                              borderSide: const BorderSide(color: TradeLinkColors.outlineVariant),
+                          ui.Success(data: final cats) => DropdownButtonFormField<String>(
+                              value: vm.categoryId,
+                              decoration: InputDecoration(
+                                labelText: 'Danh mục',
+                                filled: true,
+                                fillColor: TradeLinkColors.surfaceContainerLowest,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(TradeLinkRadii.md),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(TradeLinkRadii.md),
+                                  borderSide: const BorderSide(color: TradeLinkColors.outlineVariant),
+                                ),
+                              ),
+                              items: cats
+                                  .map((c) => DropdownMenuItem(value: c.id, child: Text(c.name)))
+                                  .toList(),
+                              onChanged: (id) {
+                                final picked = cats.firstWhere((c) => c.id == id);
+                                vm.setCategory(picked.id, picked.name);
+                              },
                             ),
-                          ),
-                          items: CreateListingViewModel.categories
-                              .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                              .toList(),
-                          onChanged: (v) => vm.setCategory(v!),
-                        ),
+                          _ => Text('Không tải được danh mục', style: TextStyle(color: theme.colorScheme.error)),
+                        },
                         const SizedBox(height: TradeLinkSpacing.md),
                         Text(
                           'Tình trạng',

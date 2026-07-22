@@ -68,7 +68,9 @@ class StorageService {
   // ── Recent searches (không nhạy cảm → SharedPreferences là đủ) ──
   Future<List<String>> getRecentSearches() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getStringList(_keyRecentSearches) ?? const [];
+    // Luôn trả về list mutable riêng — tránh Unsupported operation: remove
+    // khi gọi .remove()/.insert() trên const [] hoặc list cache nội bộ của plugin.
+    return List<String>.of(prefs.getStringList(_keyRecentSearches) ?? const []);
   }
 
   Future<void> saveRecentSearches(List<String> searches) async {

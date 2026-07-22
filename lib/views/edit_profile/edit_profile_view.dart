@@ -293,6 +293,15 @@ class _EditProfileBody extends StatelessWidget {
               ),
             ),
           ],
+          if (vm.saveState is Error) ...[
+            const SizedBox(height: TradeLinkSpacing.xs),
+            Text(
+              (vm.saveState as Error).message,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: TradeLinkColors.error,
+              ),
+            ),
+          ],
           const SizedBox(height: TradeLinkSpacing.xl),
           TradeLinkButton.cta(
             label: 'Lưu thay đổi',
@@ -301,7 +310,17 @@ class _EditProfileBody extends StatelessWidget {
                 ? null
                 : () async {
                     final success = await vm.save();
-                    if (success && context.mounted) context.pop();
+                    if (!context.mounted) return;
+                    if (success) {
+                      context.pop();
+                    } else {
+                      final msg = vm.saveState is Error
+                          ? (vm.saveState as Error).message
+                          : 'Lưu thay đổi thất bại';
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(msg)),
+                      );
+                    }
                   },
           ),
         ],

@@ -256,22 +256,29 @@ class _BodyState extends State<_Body> {
   }
 
   // ── Results panel ──
+  // Chip filter luôn hiển thị (kể cả khi 0 kết quả) để người dùng biết đang lọc
+  // theo tiêu chí nào và có thể đổi/xóa filter ngay, không bị "biến mất" khi rỗng.
   Widget _buildResultsPanel(SearchResultsViewModel vm) {
-    return switch (vm.state) {
-      Loading() => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-      Error(message: final m) => _buildError(m, vm),
-      Success(data: final items) => items.isEmpty
-          ? _buildEmpty(vm)
-          : _buildResultsList(vm, items),
-      _ => const SizedBox.shrink(),
-    };
-  }
-
-  Widget _buildResultsList(SearchResultsViewModel vm, List<Listing> items) {
     return Column(
       children: [
-        // Filter chips
         _buildFilterChips(vm),
+        Expanded(
+          child: switch (vm.state) {
+            Loading() => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            Error(message: final m) => _buildError(m, vm),
+            Success(data: final items) => items.isEmpty
+                ? _buildEmpty(vm)
+                : _buildResultsListBody(vm, items),
+            _ => const SizedBox.shrink(),
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildResultsListBody(SearchResultsViewModel vm, List<Listing> items) {
+    return Column(
+      children: [
         // Results count
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -392,6 +399,7 @@ class _BodyState extends State<_Body> {
   }
 
   Widget _buildEmpty(SearchResultsViewModel vm) {
+    final filtered = vm.hasActiveFilters;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -402,15 +410,25 @@ class _BodyState extends State<_Body> {
               color: TradeLinkColors.onSurfaceVariant.withValues(alpha: 0.4)),
             const SizedBox(height: 16),
             Text(
-              'Không tìm thấy kết quả cho "${vm.query}"',
+              filtered
+                  ? 'Không có kết quả cho "${vm.query}" với bộ lọc đang chọn'
+                  : 'Không tìm thấy kết quả cho "${vm.query}"',
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Text(
-              'Thử từ khóa khác hoặc xem danh mục',
+              filtered ? 'Thử bỏ bớt bộ lọc hoặc đổi từ khóa khác' : 'Thử từ khóa khác hoặc xem danh mục',
+              textAlign: TextAlign.center,
               style: TextStyle(color: TradeLinkColors.onSurfaceVariant),
             ),
+            if (filtered) ...[
+              const SizedBox(height: 16),
+              OutlinedButton(
+                onPressed: vm.clearFilters,
+                child: const Text('Xóa bộ lọc'),
+              ),
+            ],
           ],
         ),
       ),
@@ -623,10 +641,21 @@ class _FilterSheetState extends State<_FilterSheet> {
                         onPressed: () {
                           final min = double.tryParse(_minController.text);
                           final max = double.tryParse(_maxController.text);
-                          widget.vm
-                            ..setCategoryFilter(_categoryId, _categoryName)
-                            ..setPriceRange(min, max)
-                            ..setSort(_sort);
+                          if (min != null && max != null && min > max) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Khoảng giá không hợp lệ: giá "Từ" phải nhỏ hơn hoặc bằng giá "Đến"'),
+                              ),
+                            );
+                            return;
+                          }
+                          widget.vm.applyFilters(
+                            categoryId: _categoryId,
+                            categoryName: _categoryName,
+                            minPrice: min,
+                            maxPrice: max,
+                            sort: _sort,
+                          );
                           Navigator.pop(context);
                         },
                         child: const Text('Áp dụng'),

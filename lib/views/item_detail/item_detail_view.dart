@@ -526,11 +526,11 @@ class _BodyState extends State<_Body> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (canBuyDirectly) ...[
-          // CTA chính: Mua an toàn — dùng context.go (cross-branch sang Transactions)
+          // CTA chính: Mua an toàn
           TradeLinkButton.cta(
             label: 'Mua an toàn',
             icon: Icons.shopping_cart_outlined,
-            onPressed: () => context.go('${AppPaths.createOrder}/${item.id}'),
+            onPressed: () => context.push('${AppPaths.createOrder}/${item.id}'),
           ),
           const SizedBox(height: TradeLinkSpacing.sm),
         ],
